@@ -1,0 +1,212 @@
+body {
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background-color: #fbfbfb;
+    color: #333;
+    margin: 0;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Шапка */
+.main-header {
+    padding: 15px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.logo {
+    color: #f60;
+    font-size: 24px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+/* Заголовок и описание */
+.recipe-title {
+    text-align: center;
+    font-size: 28px;
+    font-weight: bold;
+    text-transform: uppercase;
+    margin-bottom: 15px;
+}
+
+.recipe-description {
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 30px;
+    font-style: italic;
+    color: #555;
+    font-size: 15px;
+}
+
+/* Основной контент */
+.recipe-main-grid {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+/* Левая часть - Фото */
+.recipe-visual {
+    flex: 0 0 450px;
+}
+
+.image-wrapper img {
+    width: 100%;
+    border-radius: 8px;
+    display: block;
+}
+
+.metrics {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    color: #666;
+    font-size: 14px;
+    width: 100%;
+}
+
+.stats {
+    display: flex;
+    align-items: center;
+}
+
+.stat-item {
+    display: inline-flex;
+    gap: 5px;
+    margin-left: 15px;
+}
+
+.stat-item img {
+    display: block;
+    transition: transform 0.2s; /* анимация при нажатии */
+}
+
+.stat-item img:active {
+    transform: scale(1.2);
+}
+
+.author {
+    text-align: left;
+    font-size: 13px;
+    color: #888;
+}
+
+.author span {
+    color: #0066cc;
+    cursor: pointer;
+}
+/* Правая часть: Ингредиенты */
+.ingredients-section {
+    flex: 1;
+    background: #fff;
+}
+
+.ingredients-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.ingredients-header h2 {
+    font-size: 18px;
+    margin: 0;
+    font-weight: bold;
+}
+
+/* Управление порциями */
+.servings-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.servings-control label {
+    font-size: 14px;
+}
+
+.input-group {
+    display: flex;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.input-group input {
+    width: 40px;
+    border: none;
+    text-align: center;
+    font-size: 16px;
+    outline: none;
+    padding: 5px;
+}
+
+.spin-buttons {
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid #ccc;
+}
+
+.spin-buttons button {
+    border: none;
+    background: #f9f9f9;
+    height: 16px;
+    width: 20px;
+    cursor: pointer;
+    font-size: 15px;
+
+    font-weight: bold;
+    color: #515050;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.spin-buttons button:first-child {
+    border-bottom: 1px solid #ccc;
+}
+
+.ingredients-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ingredients-list li {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 10px;
+}
+
+.ing-dots {
+    flex-grow: 1;
+    border-bottom: 1px dotted #ccc;
+    margin: 0 7px;
+    height: 1px;
+}
+
+.ing-name {
+    color: #0066cc;
+}
+
+.ing-value {
+    font-weight: bold;
+}
+
+/* Для мобилок------------------------------------------- */
+@media (max-width: 768px) {
+    .recipe-main-grid {
+        flex-direction: column;
+    }
+    .recipe-visual {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+}

@@ -1,0 +1,81 @@
+erDiagram
+    Users ||--o{ Recipes : "создает"
+    Users ||--o{ UserGroups : "состоит в"
+    Groups ||--o{ UserGroups : "включает"
+    Groups ||--o{ GroupInvites : "генерирует"
+    Groups ||--o{ GroupRecipes : "делится"
+    Recipes ||--o{ GroupRecipes : "доступен в"
+    Recipes ||--o{ Steps : "содержит"
+    Recipes ||--o{ Ingredients : "содержит"
+    Steps ||--o{ StepNotes : "имеет"
+    Users ||--o{ StepNotes : "пишет"
+    Groups ||--o{ StepNotes : "видит"
+
+    Users {
+        Guid id PK
+        string name
+        string email UK
+        string password_hash
+    }
+
+    Groups {
+        Guid id PK
+        string name
+        Guid owner_id FK
+        datetime created_at
+    }
+
+    UserGroups {
+        Guid user_id PK, FK
+        Guid group_id PK, FK
+        string role "Owner/Member"
+    }
+
+    GroupInvites {
+        Guid id PK
+        Guid group_id FK
+        string code UK "Индекс: B-Tree"
+        datetime expires_at
+    }
+
+    Recipes {
+        Guid id PK
+        Guid author_id FK
+        string title "Индекс: Trigram"
+        string main_image
+        text main_text "Индекс: GIN/Trigram"
+        decimal rating
+        bool is_private
+        int time_minutes
+        datetime created_at
+    }
+
+    GroupRecipes {
+        Guid group_id PK, FK
+        Guid recipe_id PK, FK
+    }
+
+    Steps {
+        Guid id PK
+        Guid recipe_id FK
+        int sort_order
+        text content
+        string media_url
+        string media_type "photo/video/link"
+    }
+
+    Ingredients {
+        Guid id PK
+        Guid recipe_id FK
+        string name
+        decimal amount
+        string measure
+    }
+
+    StepNotes {
+        Guid id PK
+        Guid step_id FK
+        Guid user_id FK
+        Guid group_id FK "NULL если приватная"
+        text note_text
+    }
