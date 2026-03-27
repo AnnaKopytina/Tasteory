@@ -6,4 +6,6 @@ public class JwtOptions
     public string Audience { get; set; } = string.Empty;
     public string SecretKey { get; set; } = string.Empty;
     public int ExpiresHours { get; set; }
+
+    public string CookieName { get; set; } = "tasty-auth";
 }

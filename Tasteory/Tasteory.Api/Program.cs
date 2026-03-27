@@ -3,6 +3,7 @@ using DotNetEnv;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
+using Tastory.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,8 @@ builder.Services.AddAutoMapper(cfg => {}, AppDomain.CurrentDomain.GetAssemblies(
 
 builder.Services.AddControllers();
 
+builder.Services.AddApiAuthentication(builder.Configuration);
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -56,7 +59,9 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 app.UseCors();
 
+app.UseAuthentication(); 
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

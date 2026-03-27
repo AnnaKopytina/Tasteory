@@ -1,4 +1,7 @@
+using Application.Interfaces.Services;
+using Infrastructure.Auth;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Tasteory.Api.DTOs;
 
 namespace Tasteory.Api.Controllers;
@@ -7,44 +10,58 @@ namespace Tasteory.Api.Controllers;
 [Route("api/auth")]
 public class AuthController : ControllerBase
 {
-    [HttpPost("register")]
-    public IActionResult Register([FromBody] RegisterRequest request)
+    private readonly IAuthService _authService;
+    private readonly JwtOptions _jwtOptions;
+
+    public AuthController(IAuthService authService, IOptions<JwtOptions> jwtOptions)
     {
-        if (string.IsNullOrEmpty(request.Email) || request.Password.Length < 6)
-            return BadRequest(new { message = "Некорректные данные или пароль слишком короткий" });
-
-        if (request.Email == "exists@test.com")
-            return Conflict(new { message = "Пользователь с таким email уже существует" });
-
-        var response = new UserResponse(Guid.NewGuid(), request.Email, request.Name);
-        
-        return StatusCode(201, response); 
+        _authService = authService;
+        _jwtOptions = jwtOptions.Value;
     }
-    
-    [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginRequest request)
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        if (request.Email == "error@test.com") 
-            return Unauthorized(new { message = "Ошибка входа" });
-
-        var mockToken = "super-secret-jwt-token";
-        var cookieOptions = new CookieOptions
+        //TODO: бахнуть мидлвар
+        try
         {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTime.UtcNow.AddDays(7)
-        };
-        Response.Cookies.Append("tastory_token", mockToken, cookieOptions);
+            await _authService.RegisterAsync(request.Name, request.Email, request.Password);
+            var response = new UserResponse(Guid.NewGuid(), request.Email, request.Name);
 
-        var user = new UserResponse(Guid.NewGuid(), request.Email, "Дмитрий");
-        return Ok(user);
+            return StatusCode(201, response);
+        }
+        catch (ArgumentException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    {
+        try
+        {
+            var token = await _authService.LoginAsync(request.Email, request.Password);
+            Response.Cookies.Append(_jwtOptions.CookieName, token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false,
+                SameSite = SameSiteMode.Strict,
+                Expires = DateTime.UtcNow.AddHours(_jwtOptions.ExpiresHours)
+            });
+
+            return NoContent();
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            return Unauthorized(new { message = exception.Message });
+        }
     }
 
     [HttpPost("logout")]
     public IActionResult Logout()
     {
-        Response.Cookies.Delete("tastory_token");
+        Response.Cookies.Delete(_jwtOptions.CookieName);
         return NoContent();
     }
 }
