@@ -1,23 +1,21 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
-USER $APP_UID
+﻿FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine AS build
+WORKDIR /src
+
+COPY ["Tasteory.Api/Tasteory.Api.csproj", "Tasteory.Api/"]
+COPY ["Tasteory.Application/Tasteory.Application.csproj", "Tasteory.Application/"]
+COPY ["Tasteory.Domain/Tasteory.Domain.csproj", "Tasteory.Domain/"]
+COPY ["Tasteory.Infrastructure/Tasteory.Infrastructure.csproj", "Tasteory.Infrastructure/"]
+
+RUN dotnet restore "Tasteory.Api/Tasteory.Api.csproj"
+
+COPY . .
+
+RUN dotnet publish "Tasteory.Api/Tasteory.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:8.0-alpine AS final
 WORKDIR /app
 EXPOSE 8080
-EXPOSE 8081
+COPY --from=build /app/publish .
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-ARG BUILD_CONFIGURATION=Release
-WORKDIR /src
-COPY ["Tastory/Tastory.csproj", "Tastory/"]
-RUN dotnet restore "Tastory/Tastory.csproj"
-COPY . .
-WORKDIR "/src/Tastory"
-RUN dotnet build "Tastory.csproj" -c $BUILD_CONFIGURATION -o /app/build
-
-FROM build AS publish
-ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "Tastory.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
-
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "Tastory.dll"]
+ENV ASPNETCORE_URLS=http://+:8080
+ENTRYPOINT ["dotnet", "Tasteory.Api.dll"]

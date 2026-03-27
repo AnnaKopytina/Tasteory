@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Tasteory</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/sidebar/sidebar.css">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="logo">Tasteory</div>
+
+    <nav class="side-nav">
+        <a href="/main" class="nav-item active" data-page="Главная">
+            <img class="icon" src="/svg/sidebar/book.svg">
+            <span>Главная</span>
+        </a>
+
+        <a href="/create" class="nav-item" data-page="Создать рецепт">
+            <img class="icon" src="/svg/sidebar/plus.svg">
+            <span>Создать рецепт</span>
+        </a>
+
+        <div class="nav-group">
+            <div class="nav-item group-header">
+                <div id="toggle-groups" style="display: flex; align-items: center;">
+                    <img class="icon" src="/svg/sidebar/openIcon.svg">
+                    <span>Мои группы</span>
+                </div>
+                <!-- Плюсик -->
+                <img class="icon add-btn" id="add-group-btn" src="/svg/sidebar/plus.svg" title="Добавить группу">
+            </div>
+            <div class="sub-menu" id="groups-list">
+            </div>
+        </div>
+
+        <a href="/favorite" class="nav-item" data-page="Избранное">
+            <img class="icon" src="/svg/sidebar/fovorite.svg">
+            <span>Избранное</span>
+        </a>
+
+        <a href="/profile" class="nav-item" data-page="Профиль">
+            <img class="icon" src="/svg/sidebar/profile.svg">
+            <span>Профиль</span>
+        </a>
+    </nav>
+</aside>
+
+<!-- Динамический контент -->
+<main class="content-area" id="content-root">
+</main>
+
+<script src="/api.js"></script>
+<script src="/sidebar/sidebar.js"></script>
+</body>
+</html>

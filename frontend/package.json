@@ -1,0 +1,10 @@
+{
+  "name": "tasteory-frontend",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "browser-sync start --server --files './**/*' --single"
+  },
+  "devDependencies": {
+    "browser-sync": "^3.0.0"
+  }
+}
