@@ -17,5 +17,5 @@ WORKDIR /app
 EXPOSE 8080
 COPY --from=build /app/publish .
 
-ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_HTTP_PORTS=8080
 ENTRYPOINT ["dotnet", "Tasteory.Api.dll"]
