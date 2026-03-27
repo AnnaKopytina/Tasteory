@@ -31,6 +31,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      JwtOptions__SecretKey: ${JWT_SECRET}
+      JwtOptions__Issuer: ${JWT_ISSUER}
+      JwtOptions__Audience: ${JWT_AUDIENCE}
+      JwtOptions__ExpiresHours: 24
 
   frontend:
     build:
