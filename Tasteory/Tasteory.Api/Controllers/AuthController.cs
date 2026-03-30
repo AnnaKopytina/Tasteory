@@ -22,40 +22,24 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        //TODO: бахнуть мидлвар
-        try
-        {
-            await _authService.RegisterAsync(request.Name, request.Email, request.Password);
-            var response = new UserResponse(Guid.NewGuid(), request.Email, request.Name);
-
-            return StatusCode(201, response);
-        }
-        catch (ArgumentException exception)
-        {
-            return BadRequest(new { message = exception.Message });
-        }
+        await _authService.RegisterAsync(request.Name, request.Email, request.Password);
+        
+        return StatusCode(201, new UserResponse(Guid.NewGuid(), request.Email, request.Name));
     }
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        try
+        var token = await _authService.LoginAsync(request.Email, request.Password);
+        Response.Cookies.Append(_jwtOptions.CookieName, token, new CookieOptions
         {
-            var token = await _authService.LoginAsync(request.Email, request.Password);
-            Response.Cookies.Append(_jwtOptions.CookieName, token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = false,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddHours(_jwtOptions.ExpiresHours)
-            });
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddHours(_jwtOptions.ExpiresHours)
+        });
 
-            return NoContent();
-        }
-        catch (UnauthorizedAccessException exception)
-        {
-            return Unauthorized(new { message = exception.Message });
-        }
+        return NoContent();
     }
 
     [HttpPost("logout")]

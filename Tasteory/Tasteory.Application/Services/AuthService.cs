@@ -1,6 +1,7 @@
 ﻿using Application.Interfaces.Auth;
 using Application.Interfaces.Services;
 using Domain.Entities;
+using Domain.Exceptions;
 using Domain.Interfaces;
 
 namespace Application.Services;
@@ -24,8 +25,7 @@ public class AuthService : IAuthService
 
         if (existingUser is not null)
         {
-            //TODO: кастомные эксепшены забабахать
-            throw new ArgumentException("User with the same Email already exists");
+            throw new AlreadyExistsException("User with the same Email already exists");
         }
 
         var passwordHash = _passwordHasher.Generate(password);
