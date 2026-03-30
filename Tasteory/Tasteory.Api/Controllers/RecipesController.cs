@@ -1,3 +1,4 @@
+using Application.Metrics;
 using Microsoft.AspNetCore.Mvc;
 using Tasteory.Api.DTOs;
 using Tastory.DTO;
@@ -67,7 +68,9 @@ public class RecipesController : ControllerBase
     {
         if (string.IsNullOrEmpty(request.Title)) 
             return BadRequest(new { message = "Заголовок обязателен" });
-
+        
+        var visibility = request.IsPrivate ? "private" : "public";
+        TasteoryMetrics.RecipesCreatedTotal.WithLabels(visibility).Inc();
         var response = GetFullMockRecipe(Guid.NewGuid());
         return StatusCode(201, response);    
     }

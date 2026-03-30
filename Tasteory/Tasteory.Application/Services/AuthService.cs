@@ -1,5 +1,6 @@
 ﻿using Application.Interfaces.Auth;
 using Application.Interfaces.Services;
+using Application.Metrics;
 using Domain.Entities;
 using Domain.Exceptions;
 using Domain.Interfaces;
@@ -33,6 +34,8 @@ public class AuthService : IAuthService
         var user = new User(Guid.NewGuid(), userName, email, passwordHash);
 
         await _userRepository.AddAsync(user);
+        TasteoryMetrics.UsersRegisteredTotal.Inc(); 
+
     }
 
     public async Task<string> LoginAsync(string email, string password)

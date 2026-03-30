@@ -11,4 +11,8 @@
       <ProjectReference Include="..\Tasteory.Domain\Tasteory.Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
+    </ItemGroup>
+
 </Project>
