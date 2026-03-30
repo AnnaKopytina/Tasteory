@@ -2,18 +2,20 @@ using Domain.Interfaces;
 using DotNetEnv;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Repositories;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Tastory.Extensions;
 using Tastory.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
+Env.TraversePath().Load();
+builder.Configuration.AddEnvironmentVariables(); 
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
-    Env.TraversePath().Load();
-    
     var dbPort = Environment.GetEnvironmentVariable("POSTGRES_PORT");
     var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB");
     var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER");
@@ -28,13 +30,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddTransient<ErrorHandlerMiddleware>(); 
 builder.Services.AddAutoMapper(cfg => {}, AppDomain.CurrentDomain.GetAssemblies());
 
 
 builder.Services.AddControllers();
 
 builder.Services.AddApiAuthentication(builder.Configuration);
-
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(@"/root/.aspnet/DataProtection-Keys"));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -50,6 +54,19 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    try 
+    {
+        dbContext.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Could not run migrations: {ex.Message}");
+    }
+}
 
 app.UseMiddleware<ErrorHandlerMiddleware>();
 if (app.Environment.IsDevelopment())
