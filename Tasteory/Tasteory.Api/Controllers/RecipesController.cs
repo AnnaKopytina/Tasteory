@@ -28,7 +28,7 @@ public class RecipesController : ControllerBase
             .Take(pageSize)
             .ToList();
 
-        return Ok(new PagedResponse<RecipeSummaryResponse>(items, filtered.Count, page, pageSize));
+        return Ok();
     }
     
     [HttpGet("suggest")]
@@ -60,7 +60,7 @@ public class RecipesController : ControllerBase
         [FromQuery] int pageSize = 10)
     {
         var mockItems = new List<RecipeSummaryResponse> { GetMockSummary(Guid.NewGuid()) };
-        return Ok(new PagedResponse<RecipeSummaryResponse>(mockItems, 1, page, pageSize));
+        return Ok();
     }
 
     [HttpPost]

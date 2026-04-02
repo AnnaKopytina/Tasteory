@@ -1,5 +1,8 @@
+using Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Tasteory.Api.DTOs;
+using Tastory.Extensions;
 
 namespace Tasteory.Api.Controllers;
 
@@ -7,47 +10,76 @@ namespace Tasteory.Api.Controllers;
 [Route("api/users")]
 public class UsersController : ControllerBase
 {
-    [HttpGet("me")]
-    public ActionResult<UserResponse> GetMe()
-    {
-        var mockUser = new UserResponse(
-            Guid.Parse("7b2184f4-5263-4b5b-9d62-793547900f68"), 
-            "dima@tasteory.com", 
-            "Дмитрий"
-        );
+    //TODO: Шарахнуть Fluent-Validation
+    private IUserService _userService;
 
-        return Ok(mockUser);
+    public UsersController(IUserService userService)
+    {
+        _userService = userService;
+    }
+
+    [HttpGet("me")]
+    [Authorize]
+    public async Task<ActionResult<UserResponse>> GetMe()
+    {
+        var userId = User.GetUserId();
+        var user = await _userService.GetUserByIdAsync(userId);
+
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(new UserResponse(user.Id, user.Email, user.UserName));
     }
 
     [HttpPut("me")]
-    public ActionResult<UserResponse> UpdateMe([FromBody] UpdateUserRequest request)
+    [Authorize]
+    public async Task<ActionResult<UserResponse>> UpdateMe([FromBody] UpdateUserRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Name))
-            return BadRequest(new { message = "Имя не может быть пустым" });
+        var userId = User.GetUserId();
+        var updatedUser = await _userService.UpdateUserAsync(userId, request.Name);
 
-        var updatedUser = new UserResponse(
-            Guid.Parse("7b2184f4-5263-4b5b-9d62-793547900f68"), 
-            "dima@tasteory.com", 
-            request.Name
-        );
+        if (updatedUser is null)
+        {
+            return NotFound();
+        }
 
-        return Ok(updatedUser);
+        return Ok(new UserResponse(updatedUser.Id, updatedUser.Email, updatedUser.UserName));
     }
 
     [HttpDelete("me")]
-    public IActionResult DeleteMe()
+    [Authorize]
+    public async Task<IActionResult> DeleteMe()
     {
+        var userId = User.GetUserId();
+
+        await _userService.DeleteUserAsync(userId);
+
+        Response.Cookies.Delete("tasty-auth");
+
         return NoContent();
     }
-    
+
     [HttpGet("me/groups")]
-    public ActionResult<List<GroupResponse>> GetMyGroups()
+    [Authorize]
+    public async Task<ActionResult<List<GroupResponse>>> GetMyGroups([FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var myGroups = new List<GroupResponse>
+        var userId = User.GetUserId();
+
+        var (groups, totalCount) = await _userService.GetUserGroupsAsync(userId, page, pageSize);
+
+        var groupResponses = groups
+            .Select(g => new GroupResponse(g.Id, g.Name, g.InviteCode, g.OwnerName, g.MembersCount))
+            .ToList();
+
+        return Ok(new PagedResponse<GroupResponse>
         {
-            new GroupResponse(Guid.NewGuid(), "Семья Ивановых", "IVAN-123", "Таня", 4),
-            new GroupResponse(Guid.NewGuid(), "Дача (Рецепты)", "GARDEN-55", "Ybrbnf", 2)
-        };
-        return Ok(myGroups);
+            Items = groupResponses,
+            TotalCount = totalCount,
+            Page = page,
+            PageSize = pageSize
+        });
     }
 }
