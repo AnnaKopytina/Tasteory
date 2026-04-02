@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using AutoMapper.QueryableExtensions;
 using Domain.Entities;
 using Domain.Interfaces;
 using Infrastructure.Persistence.Context;
@@ -71,5 +72,24 @@ public class UserRepository : IUserRepository
 
         _context.Users.Remove(userEntity);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<(List<Group>, int TotalCount)> GetUserGroupsAsync(Guid userId, int page, int pageSize)
+    {
+        var query = _context.UserGroups
+            .AsNoTracking()
+            .Where(ug => ug.UserId == userId);
+
+        var totalCount = await query.CountAsync();
+
+        var groups = await query
+            .OrderByDescending(ug => ug.Group.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(ug => ug.Group)
+            .ProjectTo<Group>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+
+        return (groups, totalCount);
     }
 }
