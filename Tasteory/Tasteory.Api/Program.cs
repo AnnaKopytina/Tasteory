@@ -1,3 +1,5 @@
+using Application.Interfaces.Services;
+using Application.Services;
 using Domain.Interfaces;
 using DotNetEnv;
 using Infrastructure.Persistence.Context;
@@ -54,6 +56,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddTransient<ErrorHandlerMiddleware>(); 
 builder.Services.AddAutoMapper(cfg => {}, AppDomain.CurrentDomain.GetAssemblies());
 
