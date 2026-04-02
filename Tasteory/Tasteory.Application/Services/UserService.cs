@@ -1,0 +1,44 @@
+﻿using Application.Interfaces.Services;
+using Domain.Entities;
+using Domain.Interfaces;
+
+namespace Application.Services;
+
+public class UserService : IUserService
+{
+    private IUserRepository _userRepository;
+
+    public UserService(IUserRepository userRepository)
+    {
+        _userRepository = userRepository;
+    }
+
+    public async Task<User?> GetUserByIdAsync(Guid userId)
+    {
+        return await _userRepository.GetByIdAsync(userId);
+    }
+
+    public async Task<User?> UpdateUserAsync(Guid userId, string newName)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+
+        if (user is null)
+        {
+            return null;
+        }
+
+        await _userRepository.UpdateAsync(user, newName);
+
+        return user;
+    }
+
+    public async Task DeleteUserAsync(Guid userId)
+    {
+        await _userRepository.RemoveByIdAsync(userId);
+    }
+
+    public async Task<(List<Group> Groups, int TotalCount)> GetUserGroupsAsync(Guid userId, int page, int pageSize)
+    {
+        return await _userRepository.GetUserGroupsAsync(userId, page, pageSize);
+    }
+}
