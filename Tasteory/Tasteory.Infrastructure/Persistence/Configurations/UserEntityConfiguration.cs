@@ -8,14 +8,16 @@ public class UserEntityConfiguration : IEntityTypeConfiguration<UserEntity>
 {
     public void Configure(EntityTypeBuilder<UserEntity> builder)
     {
-        builder.ToTable("Users");
+        builder
+            .Property(x => x.Email)
+            .HasMaxLength(100);
 
-        builder.HasKey(x => x.Id);
+        builder
+            .Property(x => x.Email)
+            .HasMaxLength(255);
 
-        builder.Property(x => x.Email)
-            .IsRequired();
-        
-        builder.HasIndex(x => x.Email)
+        builder
+            .HasIndex(x => x.Email)
             .IsUnique();
     }
 }

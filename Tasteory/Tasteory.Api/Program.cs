@@ -61,8 +61,12 @@ builder.Services.AddAutoMapper(cfg => {}, AppDomain.CurrentDomain.GetAssemblies(
 builder.Services.AddControllers();
 
 builder.Services.AddApiAuthentication(builder.Configuration);
-builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(@"/root/.aspnet/DataProtection-Keys"));
+
+if (Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true")
+{
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(@"/root/.aspnet/DataProtection-Keys"));
+}
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -83,13 +87,18 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
     try 
     {
+        logger.LogInformation("Applying database migrations...");
         dbContext.Database.Migrate();
+        logger.LogInformation("Database migrations applied successfully!");
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Could not run migrations: {ex.Message}");
+        logger.LogCritical(ex, "A fatal error occurred while applying database migrations!");
+        Console.WriteLine($"Could not run migrations: {ex}");
     }
 }
 
