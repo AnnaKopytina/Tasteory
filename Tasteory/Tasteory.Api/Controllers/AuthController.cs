@@ -25,7 +25,7 @@ public class AuthController : ControllerBase
     {
         await _authService.RegisterAsync(request.Name, request.Email, request.Password);
         
-        return StatusCode(201, new UserResponse(Guid.NewGuid(), request.Email, request.Name));
+        return StatusCode(201);
     }
 
     [HttpPost("login")]

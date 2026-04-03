@@ -1,3 +1,4 @@
+using Application.DTO.Requests;
 using Application.DTO.Responses;
 using Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,6 @@ namespace Tasteory.Controllers;
 [Route("api/users")]
 public class UsersController : ControllerBase
 {
-    //TODO: Шарахнуть Fluent-Validation
     private IUserService _userService;
 
     public UsersController(IUserService userService)
@@ -63,12 +63,11 @@ public class UsersController : ControllerBase
 
     [HttpGet("me/groups")]
     [Authorize]
-    public async Task<ActionResult<List<GroupResponse>>> GetMyGroups([FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10)
+    public async Task<ActionResult<List<GroupResponse>>> GetMyGroups([FromQuery] PaginationQuery query)
     {
         var userId = User.GetUserId();
 
-        var (groups, totalCount) = await _userService.GetUserGroupsAsync(userId, page, pageSize);
+        var (groups, totalCount) = await _userService.GetUserGroupsAsync(userId, query.Page, query.PageSize);
 
         var groupResponses = groups
             .Select(g => new GroupResponse(g.Id, g.Name, g.InviteCode, g.OwnerName, g.MembersCount))
@@ -78,8 +77,8 @@ public class UsersController : ControllerBase
         {
             Items = groupResponses,
             TotalCount = totalCount,
-            Page = page,
-            PageSize = pageSize
+            Page = query.Page,
+            PageSize = query.PageSize
         });
     }
 }

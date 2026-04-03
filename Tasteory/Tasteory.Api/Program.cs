@@ -1,7 +1,10 @@
 using Application.Interfaces.Services;
 using Application.Services;
+using Application.Validation;
 using Domain.Interfaces;
 using DotNetEnv;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.DataProtection;
@@ -25,17 +28,17 @@ Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .Filter.ByExcluding("RequestPath = '/metrics' or RequestPath = '/swagger/index.html'")
     .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.GrafanaLoki("http://loki:3100", new [] 
-    { 
-        new LokiLabel { Key = "app", Value = "tasteory-api" } 
-    }) 
+    .WriteTo.GrafanaLoki("http://loki:3100", new[]
+    {
+        new LokiLabel { Key = "app", Value = "tasteory-api" }
+    })
     .CreateLogger();
 
 builder.Host.UseSerilog();
 // -------------------------
 
 Env.TraversePath().Load();
-builder.Configuration.AddEnvironmentVariables(); 
+builder.Configuration.AddEnvironmentVariables();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
@@ -45,22 +48,22 @@ if (string.IsNullOrWhiteSpace(connectionString))
     var dbName = Environment.GetEnvironmentVariable("POSTGRES_DB");
     var dbUser = Environment.GetEnvironmentVariable("POSTGRES_USER");
     var dbPass = Environment.GetEnvironmentVariable("POSTGRES_PASSWORD");
-    
+
     connectionString = $"Host=localhost;Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass}";
 }
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    options.UseNpgsql(connectionString);
-});
+builder.Services.AddDbContext<AppDbContext>(options => { options.UseNpgsql(connectionString); });
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddTransient<ErrorHandlerMiddleware>(); 
-builder.Services.AddAutoMapper(cfg => {}, AppDomain.CurrentDomain.GetAssemblies());
+builder.Services.AddTransient<ErrorHandlerMiddleware>();
+builder.Services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
 
 
 builder.Services.AddControllers();
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<PaginationQueryValidator>();
 
 builder.Services.AddApiAuthentication(builder.Configuration);
 
@@ -77,7 +80,7 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "http://localhost:8080", "http://localhost:3000") 
+        policy.WithOrigins("http://localhost:5173", "http://localhost:8080", "http://localhost:3000")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
@@ -90,8 +93,8 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    
-    try 
+
+    try
     {
         logger.LogInformation("Applying database migrations...");
         dbContext.Database.Migrate();
@@ -106,7 +109,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseMiddleware<ErrorHandlerMiddleware>();
 app.UseMetricServer();
-app.UseHttpMetrics(); 
+app.UseHttpMetrics();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -116,7 +119,7 @@ if (app.Environment.IsDevelopment())
 //app.UseHttpsRedirection();
 app.UseCors();
 
-app.UseAuthentication(); 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
