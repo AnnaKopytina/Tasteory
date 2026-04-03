@@ -1,3 +1,3 @@
-namespace Tasteory.Api.DTOs;
+namespace Application.DTO.Responses;
 
 public record UpdateUserRequest(string Name);

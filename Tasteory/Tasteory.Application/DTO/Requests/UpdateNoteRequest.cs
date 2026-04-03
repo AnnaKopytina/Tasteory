@@ -1,4 +1,4 @@
-namespace Tasteory.Api.DTOs;
+namespace Application.DTO.Requests;
 
 public record UpdateNoteRequest(
     Guid StepId, 

@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace Tastory.Extensions;
+namespace Tasteory.Extensions;
 
 public static class ClaimsPrincipalExtensions
 {

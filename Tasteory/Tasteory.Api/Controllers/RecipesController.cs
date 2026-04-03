@@ -1,9 +1,10 @@
+using Application.DTO;
+using Application.DTO.Requests;
+using Application.DTO.Responses;
 using Application.Metrics;
 using Microsoft.AspNetCore.Mvc;
-using Tasteory.Api.DTOs;
-using Tastory.DTO;
 
-namespace Tasteory.Api.Controllers;
+namespace Tasteory.Controllers;
 
 [ApiController]
 [Route("api/recipes")]

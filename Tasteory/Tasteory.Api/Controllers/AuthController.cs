@@ -1,10 +1,11 @@
+using Application.DTO.Requests;
+using Application.DTO.Responses;
 using Application.Interfaces.Services;
 using Infrastructure.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
-using Tasteory.Api.DTOs;
 
-namespace Tasteory.Api.Controllers;
+namespace Tasteory.Controllers;
 
 [ApiController]
 [Route("api/auth")]

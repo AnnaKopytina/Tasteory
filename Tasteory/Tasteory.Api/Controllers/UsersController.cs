@@ -1,10 +1,10 @@
+using Application.DTO.Responses;
 using Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Tasteory.Api.DTOs;
-using Tastory.Extensions;
+using Tasteory.Extensions;
 
-namespace Tasteory.Api.Controllers;
+namespace Tasteory.Controllers;
 
 [ApiController]
 [Route("api/users")]

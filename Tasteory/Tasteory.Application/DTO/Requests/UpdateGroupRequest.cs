@@ -1,3 +1,3 @@
-namespace Tasteory.Api.DTOs;
+namespace Application.DTO.Requests;
 
 public record UpdateGroupRequest(string Name);

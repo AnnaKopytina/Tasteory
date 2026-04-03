@@ -6,7 +6,7 @@ using Infrastructure.Auth;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
-namespace Tastory.Extensions;
+namespace Tasteory.Extensions;
 
 public static class ApiExtensions
 {

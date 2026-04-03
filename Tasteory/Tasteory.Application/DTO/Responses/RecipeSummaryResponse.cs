@@ -1,4 +1,4 @@
-namespace Tasteory.Api.DTOs;
+namespace Application.DTO.Responses;
 
 public record RecipeSummaryResponse(
     Guid Id,

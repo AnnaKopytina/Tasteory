@@ -1,7 +1,7 @@
 using System.Net;
 using Domain.Exceptions;
 
-namespace Tastory.Middleware;
+namespace Tasteory.Middleware;
 
 public class ErrorHandlerMiddleware(ILogger<ErrorHandlerMiddleware> logger) : IMiddleware
 {

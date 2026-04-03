@@ -9,10 +9,9 @@ using Microsoft.EntityFrameworkCore;
 using Prometheus;
 using Serilog;
 using Serilog.Events;
-using Serilog.Formatting.Compact;
 using Serilog.Sinks.Grafana.Loki;
-using Tastory.Extensions;
-using Tastory.Middleware;
+using Tasteory.Extensions;
+using Tasteory.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 

@@ -1,7 +1,8 @@
+using Application.DTO.Requests;
+using Application.DTO.Responses;
 using Microsoft.AspNetCore.Mvc;
-using Tasteory.Api.DTOs;
 
-namespace Tasteory.Api.Controllers;
+namespace Tasteory.Controllers;
 
 [ApiController]
 [Route("api/groups")]

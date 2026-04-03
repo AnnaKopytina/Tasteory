@@ -1,4 +1,4 @@
-namespace Tastory.DTO;
+namespace Application.DTO;
 
 public record StepDto(
     Guid Id, 
