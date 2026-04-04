@@ -1,4 +1,6 @@
-﻿namespace Infrastructure.Persistence.Entities;
+﻿using Domain.Enums;
+
+namespace Infrastructure.Persistence.Entities;
 
 public class UserGroupEntity
 {
