@@ -1,0 +1,18 @@
+﻿
+using Domain.Entities;
+using Domain.Models;
+
+namespace Application.Interfaces.Services;
+
+public interface IGroupService
+{
+    public Task<Guid> CreateGroupAsync(Guid userId, string name);
+    public Task<string> GenerateInviteCodeAsync(Guid userId, Guid groupId);
+    public Task<Guid> JoinGroupAsync(Guid userId, string inviteCode);
+    public Task DeleteGroupAsync(Guid userId, Guid groupId);
+    public Task<List<GroupMember>> GetGroupMembersAsync(Guid groupId);
+    public Task LeaveGroupAsync(Guid userId, Guid groupId);
+    public Task KickMemberAsync(Guid ownerId, Guid groupId, Guid memberToKickId);
+    public Task<Group?> GetGroupByIdAsync(Guid groupId);
+    public Task UpdateGroupAsync(Guid userId, Guid groupId, string newName);
+}

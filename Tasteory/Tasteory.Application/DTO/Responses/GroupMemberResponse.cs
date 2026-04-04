@@ -1,5 +1,3 @@
 namespace Application.DTO.Responses;
 
-public record GroupMemberResponse(
-    string Name, 
-    string Role); // "Owner" или "Member"
+public record GroupMemberResponse(Guid Id, string Name, string Role);
