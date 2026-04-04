@@ -1,56 +1,128 @@
 using Application.DTO.Requests;
 using Application.DTO.Responses;
+using Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Tasteory.Extensions;
 
 namespace Tasteory.Controllers;
 
 [ApiController]
 [Route("api/groups")]
+[Authorize]
 public class GroupsController : ControllerBase
 {
-    [HttpPost]
-    public ActionResult<GroupResponse> Create([FromBody] CreateGroupRequest request)
+    private readonly IGroupService _groupService;
+
+    public GroupsController(IGroupService groupService)
     {
-        var response = new GroupResponse(
-            Id: Guid.NewGuid(),
-            Name: request.Name,
-            InviteCode: "MAMA-PAPA-123",
-            OwnerName: "Счастливого тебе рефакторинга Никита! =)",
-            MembersCount: 1
-        );
+        _groupService = groupService;
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<GroupResponse>> Create([FromBody] CreateGroupRequest request)
+    {
+        var userId = User.GetUserId();
+
+        var groupId = await _groupService.CreateGroupAsync(userId, request.Name);
+        var inviteCode = await _groupService.GenerateInviteCodeAsync(userId, groupId);
+        var group = await _groupService.GetGroupByIdAsync(groupId);
+
+        var response = new GroupResponse(groupId, group!.Name, inviteCode, group.OwnerName, group.MembersCount);
+
         return StatusCode(201, response);
     }
 
     [HttpGet("{id:guid}")]
-    public ActionResult<GroupResponse> GetById(Guid id)
+    public async Task<ActionResult<GroupResponse>> GetById(Guid id)
     {
-        if (id == Guid.Empty) return NotFound();
-        
-        return Ok(new GroupResponse(id, "Семья Ивановых", "IVAN-CODE", "Аня", 3));
+        var group = await _groupService.GetGroupByIdAsync(id);
+
+        if (group is null)
+        {
+            return NotFound();
+        }
+
+        var response = new GroupResponse(
+            group.Id,
+            group.Name,
+            group.InviteCode ?? "No active code",
+            group.OwnerName,
+            group.MembersCount);
+
+        return Ok(response);
     }
 
     [HttpPut("{id:guid}")]
-    public IActionResult Update(Guid id, [FromBody] UpdateGroupRequest request)
+    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateGroupRequest request)
     {
-        return Ok(new { message = "Название группы обновлено", newName = request.Name });
+        var userId = User.GetUserId();
+
+        await _groupService.UpdateGroupAsync(userId, id, request.Name);
+
+        return Ok(new { Message = "Group name updated successfully", NewName = request.Name });
+    }
+
+    [HttpPost("{id:guid}/invite")]
+    public async Task<IActionResult> GenerateInvite(Guid id)
+    {
+        var userId = User.GetUserId();
+
+        var code = await _groupService.GenerateInviteCodeAsync(userId, id);
+
+        return Ok(new { InviteCode = code });
     }
 
     [HttpDelete("{id:guid}")]
-    public IActionResult Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id)
     {
+        var userId = User.GetUserId();
+
+        await _groupService.DeleteGroupAsync(userId, id);
+
         return NoContent();
     }
 
     [HttpPost("join")]
-    public IActionResult Join([FromBody] JoinGroupRequest request)
+    public async Task<IActionResult> Join([FromBody] JoinGroupRequest request)
     {
-        if (request.InviteCode == "ALREADY_IN") 
-            return Conflict(new { message = "Вы уже состоите в этой группе" });
-        
-        if (request.InviteCode == "WRONG") 
-            return NotFound(new { message = "Группа с таким кодом не найдена" });
+        var userId = User.GetUserId();
 
-        return Ok(new { message = "Добро пожаловать в семью!" });
+        var groupId = await _groupService.JoinGroupAsync(userId, request.InviteCode);
+
+        return Ok(new { message = "Successfully joined the group!", groupId = groupId });
+    }
+
+    [HttpGet("{id:guid}/members")]
+    public async Task<ActionResult<List<GroupMemberResponse>>> GetMembers(Guid id)
+    {
+        var members = await _groupService.GetGroupMembersAsync(id);
+
+        var response = members
+            .Select(m => new GroupMemberResponse(m.UserId, m.UserName, m.GroupRole.ToString()))
+            .ToList();
+
+        return Ok(response);
+    }
+
+    [HttpDelete("{id:guid}/members/me")]
+    public async Task<IActionResult> LeaveGroup(Guid id)
+    {
+        var userId = User.GetUserId();
+
+        await _groupService.LeaveGroupAsync(userId, id);
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id:guid}/members/{memberToKickId:guid}")]
+    public async Task<IActionResult> KickMember(Guid id, Guid memberToKickId)
+    {
+        var userId = User.GetUserId();
+
+        await _groupService.KickMemberAsync(userId, id, memberToKickId);
+
+        return NoContent();
     }
 
     [HttpGet("{id:guid}/recipes")]
@@ -63,29 +135,5 @@ public class GroupsController : ControllerBase
     public IActionResult AddRecipeToGroup(Guid id, [FromBody] Guid recipeId)
     {
         return StatusCode(201, new { message = "Рецепт теперь доступен всей семье" });
-    }
-
-    [HttpGet("{id:guid}/members")]
-    public ActionResult<List<GroupMemberResponse>> GetMembers(Guid id)
-    {
-        var members = new List<GroupMemberResponse>
-        {
-            new GroupMemberResponse("Воландеморт", "Owner"),
-            new GroupMemberResponse("Гари", "Member"),
-            new GroupMemberResponse("Драко", "Member")
-        };
-        return Ok(members);
-    }
-
-    [HttpDelete("{id:guid}/members/me")]
-    public IActionResult LeaveGroup(Guid id)
-    {
-        return NoContent();
-    }
-
-    [HttpDelete("{id:guid}/members/{userId:guid}")]
-    public IActionResult KickMember(Guid id, Guid userId)
-    {
-        return NoContent();
     }
 }

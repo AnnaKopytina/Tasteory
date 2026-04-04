@@ -56,6 +56,9 @@ builder.Services.AddDbContext<AppDbContext>(options => { options.UseNpgsql(conne
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IGroupRepository, GroupRepository>();
+builder.Services.AddScoped<IGroupService, GroupService>();
+
 builder.Services.AddTransient<ErrorHandlerMiddleware>();
 builder.Services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
 

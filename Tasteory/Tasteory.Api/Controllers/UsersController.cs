@@ -11,7 +11,7 @@ namespace Tasteory.Controllers;
 [Route("api/users")]
 public class UsersController : ControllerBase
 {
-    private IUserService _userService;
+    private readonly IUserService _userService;
 
     public UsersController(IUserService userService)
     {
@@ -70,7 +70,7 @@ public class UsersController : ControllerBase
         var (groups, totalCount) = await _userService.GetUserGroupsAsync(userId, query.Page, query.PageSize);
 
         var groupResponses = groups
-            .Select(g => new GroupResponse(g.Id, g.Name, g.InviteCode, g.OwnerName, g.MembersCount))
+            .Select(g => new GroupResponse(g.Id, g.Name, g.InviteCode ?? "No active code", g.OwnerName, g.MembersCount))
             .ToList();
 
         return Ok(new PagedResponse<GroupResponse>
