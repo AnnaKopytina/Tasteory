@@ -1,6 +1,6 @@
 ﻿using Domain.Entities;
 
-namespace Domain.Interfaces;
+namespace Application.Interfaces.Repositories;
 
 public interface IUserRepository
 {
@@ -10,4 +10,5 @@ public interface IUserRepository
     public Task UpdateAsync(User user, string newUserName);
     public Task RemoveByIdAsync(Guid id);
     public Task<(List<Group>, int TotalCount)> GetUserGroupsAsync(Guid userId, int page, int pageSize);
+    public Task<Dictionary<Guid, string>> GetUserNamesByIdsAsync(IEnumerable<Guid> userIds);
 }

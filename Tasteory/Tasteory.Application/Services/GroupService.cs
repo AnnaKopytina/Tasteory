@@ -1,8 +1,8 @@
-﻿using Application.Interfaces.Services;
+﻿using Application.Exceptions;
+using Application.Interfaces.Repositories;
+using Application.Interfaces.Services;
 using Domain.Entities;
 using Domain.Enums;
-using Domain.Exceptions;
-using Domain.Interfaces;
 using Domain.Models;
 
 namespace Application.Services;

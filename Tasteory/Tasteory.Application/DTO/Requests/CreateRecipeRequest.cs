@@ -1,10 +1,13 @@
 namespace Application.DTO.Requests;
 
 public record CreateRecipeRequest(
-    List<string> Tags,
-    bool IsPrivate,
     string Title,
-    string MainText,
-    TimeDto Time,
+    string? MainImage,
+    string? MainText,
+    bool IsPrivate,
+    int TimeMinutes,
+    int BasePortions,
+    string[] Tags,
     List<IngredientDto> Ingredients,
-    List<StepDto> Steps);
+    List<StepDto> Steps
+);

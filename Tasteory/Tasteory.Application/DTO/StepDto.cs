@@ -1,9 +1,10 @@
 namespace Application.DTO;
 
-public record StepDto(
-    Guid Id, 
-    int Order, 
-    MediaFieldDto Field, 
-    string Text, 
-    string? MyPrivateNote, 
-    string? GroupNote);
+public class StepDto
+{
+    public Guid Id { get; init; }
+    public int SortOrder { get; init; }
+    public string Content { get; init; } = string.Empty;
+    public string? MediaUrl { get; init; }
+    public string? MediaType { get; init; } 
+}

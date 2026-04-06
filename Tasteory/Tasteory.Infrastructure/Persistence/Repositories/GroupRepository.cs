@@ -1,7 +1,7 @@
-﻿using AutoMapper;
+﻿using Application.Interfaces.Repositories;
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Domain.Entities;
-using Domain.Interfaces;
 using Domain.Models;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Entities;

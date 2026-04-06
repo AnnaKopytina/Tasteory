@@ -1,9 +1,9 @@
-﻿using Application.Interfaces.Auth;
+﻿using Application.Exceptions;
+using Application.Interfaces.Auth;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Metrics;
 using Domain.Entities;
-using Domain.Exceptions;
-using Domain.Interfaces;
 
 namespace Application.Services;
 

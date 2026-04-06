@@ -1,7 +1,8 @@
+using Application.DTO.Responses;
+using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
 using Application.Services;
 using Application.Validation;
-using Domain.Interfaces;
 using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -58,10 +59,11 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IGroupRepository, GroupRepository>();
 builder.Services.AddScoped<IGroupService, GroupService>();
+builder.Services.AddScoped<IRecipeRepository, RecipeRepository>();
+builder.Services.AddScoped<IRecipeService, RecipeService>();
 
 builder.Services.AddTransient<ErrorHandlerMiddleware>();
-builder.Services.AddAutoMapper(cfg => { }, AppDomain.CurrentDomain.GetAssemblies());
-
+builder.Services.AddAutoMapper(_ => { }, AppDomain.CurrentDomain.GetAssemblies());
 
 builder.Services.AddControllers();
 

@@ -1,4 +1,4 @@
-namespace Domain.Exceptions;
+namespace Application.Exceptions;
 
 public abstract class BaseException(string message, int statusCode) : Exception(message)
 {

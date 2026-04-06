@@ -1,143 +1,114 @@
-using Application.DTO;
 using Application.DTO.Requests;
 using Application.DTO.Responses;
-using Application.Metrics;
+using Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Tasteory.Extensions;
 
 namespace Tasteory.Controllers;
 
 [ApiController]
 [Route("api/recipes")]
+[Authorize]
 public class RecipesController : ControllerBase
 {
-    [HttpGet]
-    public ActionResult<PagedResponse<RecipeSummaryResponse>> GetAll(
-        [FromQuery] string? searchTerm = null, 
-        [FromQuery] int page = 1, 
-        [FromQuery] int pageSize = 10)
+    private readonly IRecipeService _recipeService;
+
+    public RecipesController(IRecipeService recipeService)
     {
-        var allMockRecipes = Enumerable.Range(1, 100)
-            .Select(i => GetMockSummary(Guid.NewGuid())).ToList();
-
-        var filtered = string.IsNullOrWhiteSpace(searchTerm) 
-            ? allMockRecipes 
-            : allMockRecipes.Where(r => r.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)).ToList();
-
-        // Логика пагинации
-        var items = filtered
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
-
-        return Ok();
-    }
-    
-    [HttpGet("suggest")]
-    public ActionResult<List<RecipeSuggestionResponse>> GetSuggestions([FromQuery] string query)
-    {
-        if (string.IsNullOrWhiteSpace(query) || query.Length < 2) 
-            return Ok(new List<RecipeSuggestionResponse>());
-
-        var suggestions = new List<RecipeSuggestionResponse>
-        {
-            new (Guid.NewGuid(), "Мамин кляр"),
-            new (Guid.NewGuid(), "Кляр на минералке"),
-            new (Guid.NewGuid(), "Рыба в кляре")
-        }.Where(s => s.Title.Contains(query, StringComparison.OrdinalIgnoreCase)).ToList();
-
-        return Ok(suggestions);
-    }
-
-    [HttpGet("{id:guid}")]
-    public ActionResult<RecipeResponse> GetById(Guid id)
-    {
-        return Ok(GetFullMockRecipe(id));
-    }
-
-    [HttpGet("user/{userId:guid}")]
-    public ActionResult<PagedResponse<RecipeSummaryResponse>> GetByUserId(
-        Guid userId, 
-        [FromQuery] int page = 1, 
-        [FromQuery] int pageSize = 10)
-    {
-        var mockItems = new List<RecipeSummaryResponse> { GetMockSummary(Guid.NewGuid()) };
-        return Ok();
+        _recipeService = recipeService;
     }
 
     [HttpPost]
-    public IActionResult Create([FromBody] CreateRecipeRequest request)
+    public async Task<IActionResult> Create([FromBody] CreateRecipeRequest request)
     {
-        if (string.IsNullOrEmpty(request.Title)) 
-            return BadRequest(new { message = "Заголовок обязателен" });
-        
-        var visibility = request.IsPrivate ? "private" : "public";
-        TasteoryMetrics.RecipesCreatedTotal.WithLabels(visibility).Inc();
-        var response = GetFullMockRecipe(Guid.NewGuid());
-        return StatusCode(201, response);    
+        var authorId = User.GetUserId();
+        var recipeId = await _recipeService.CreateRecipeAsync(authorId, request);
+
+        return StatusCode(201, new { id = recipeId });
     }
 
-    [HttpPut("{id:guid}")]
-    public IActionResult Update(Guid id, [FromBody] CreateRecipeRequest request)
+    [HttpGet("{id:guid}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<RecipeResponse>> GetById(Guid id)
     {
-        return Ok(GetFullMockRecipe(id));
+        var recipeResponse = await _recipeService.GetRecipeByIdAsync(id);
+
+        if (recipeResponse is null)
+        {
+            return NotFound();
+        }
+
+        var currentUserId = User.Identity?.IsAuthenticated == true ? User.GetUserId() : Guid.Empty;
+
+        if (recipeResponse.IsPrivate && recipeResponse.AuthorId != currentUserId)
+        {
+            return Forbid();
+        }
+
+        return Ok(recipeResponse);
     }
 
     [HttpDelete("{id:guid}")]
-    public IActionResult Delete(Guid id)
+    public async Task<IActionResult> Delete(Guid id)
     {
-        return NoContent(); 
-    }
-    
-    private RecipeSummaryResponse GetMockSummary(Guid id)
-    {
-        return new RecipeSummaryResponse(
-            Id: id,
-            Title: "Мамин кляр",
-            MainImage: "/assets/icons/pie_white.png",
-            MainText: "Это краткое описание, которое быстро грузится...",
-            Author: "Воландеморт",
-            Rating: 4.8,
-            IsPrivate: false,
-            Tags: new List<string> { "Обед", "Торт" }
-            );
+        var authorId = User.GetUserId();
+
+        await _recipeService.DeleteRecipeAsync(authorId, id);
+
+        return NoContent();
     }
 
-    private RecipeResponse GetFullMockRecipe(Guid id)
+    [HttpGet("suggest")]
+    [AllowAnonymous]
+    public async Task<ActionResult<List<RecipeSuggestionResponse>>> GetSuggestions([FromQuery] string query)
     {
-        return new RecipeResponse(
-            Id: id,
-            Tags: new List<string> { "Обед", "Торт" },
-            Rating: 4.8,
-            IsPrivate: false,
-            Title: "Мамин кляр",
-            MainImage: "/assets/icons/pie_white.png",
-            MainText: "Это первый абзац текста, краткое описание семейного рецепта от Тёмного Лорда...",
-            Author: "Воландеморт",
-            Time: new TimeDto(15, "мин."),
-            Ingredients: new List<IngredientDto>
-            {
-                new IngredientDto("Мука", 1, "ст.(250мл.)"),
-                new IngredientDto("Яйцо", 2, "шт.")
-            },
-            Steps: new List<StepDto>
-            {
-                new StepDto(
-                    Id: Guid.NewGuid(), 
-                    Order: 1, 
-                    Field: new MediaFieldDto("https://example.com/video.mp4", "video"), 
-                    Text: "Смешать 2 яйца и стакан муки. вылить звлить кипятком притушить и пожарить 5 минут на среднем огне, подойти к окну потушить волосы о раин. Закрыть окно (по желанию) потом постучать по батарее, потопать ногами, достать спички из шкафа и поджечь туалетку (Над раковиной!) Золу добавить в мамин любимый горшок (удобрение)",
-                    MyPrivateNote: "У ля ля. Какие пончики",
-                    GroupNote: "Утопись и в воду"
-                ),
-                new StepDto(
-                    Id: Guid.NewGuid(), 
-                    Order: 2, 
-                    Field: new MediaFieldDto("/assets/images/step2.jpg", "photo"), 
-                    Text: "Взбить до однородной массы остатки рассудка", 
-                    MyPrivateNote: null,
-                    GroupNote: "Лучше выбросить этот рецепт к чёрту"
-                )
-            }
-        );
+        var suggestions = await _recipeService.GetSuggestionsAsync(query);
+        return Ok(suggestions);
+    }
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetAll(
+        [FromQuery] PaginationQuery query,
+        [FromQuery] string? searchTerm = null)
+    {
+        var (recipes, totalCount) = await _recipeService.GetAllPublicAsync(searchTerm, query);
+
+        return Ok(new PagedResponse<RecipeSummaryResponse>
+        {
+            Items = recipes,
+            TotalCount = totalCount,
+            Page = query.Page,
+            PageSize = query.PageSize
+        });
+    }
+
+    [HttpGet("user/{userId:guid}")]
+    [AllowAnonymous]
+    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetByUserId(
+        Guid userId,
+        [FromQuery] PaginationQuery query)
+    {
+        var (recipes, totalCount) = await _recipeService.GetByUserIdAsync(userId, query);
+
+        return Ok(new PagedResponse<RecipeSummaryResponse>
+        {
+            Items = recipes,
+            TotalCount = totalCount,
+            Page = query.Page,
+            PageSize = query.PageSize
+        });
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize]
+    public async Task<IActionResult> Update(Guid id, [FromBody] CreateRecipeRequest request)
+    {
+        var authorId = User.GetUserId();
+
+        await _recipeService.UpdateRecipeAsync(authorId, id, request);
+
+        return NoContent();
     }
 }

@@ -1,7 +1,7 @@
-﻿using AutoMapper;
+﻿using Application.Interfaces.Repositories;
+using AutoMapper;
 using AutoMapper.QueryableExtensions;
 using Domain.Entities;
-using Domain.Interfaces;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -91,5 +91,13 @@ public class UserRepository : IUserRepository
             .ToListAsync();
 
         return (groups, totalCount);
+    }
+    
+    public async Task<Dictionary<Guid, string>> GetUserNamesByIdsAsync(IEnumerable<Guid> userIds)
+    {
+        return await _context.Users
+            .AsNoTracking()
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.UserName);
     }
 }

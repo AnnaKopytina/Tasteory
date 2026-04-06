@@ -1,4 +1,4 @@
-﻿namespace Infrastructure.Persistence.Entities;
+﻿namespace Domain.Enums;
 
 public enum MediaType
 {

@@ -1,5 +1,5 @@
 using System.Net;
-using Domain.Exceptions;
+using Application.Exceptions;
 
 namespace Tasteory.Middleware;
 
