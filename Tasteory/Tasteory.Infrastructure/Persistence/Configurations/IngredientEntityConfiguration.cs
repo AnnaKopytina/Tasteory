@@ -20,5 +20,9 @@ public class IngredientEntityConfiguration : IEntityTypeConfiguration<Ingredient
         builder
             .Property(x => x.Measure)
             .HasMaxLength(50);
+        
+        builder
+            .Property(x => x.Section)
+            .HasMaxLength(100);
     }
 }

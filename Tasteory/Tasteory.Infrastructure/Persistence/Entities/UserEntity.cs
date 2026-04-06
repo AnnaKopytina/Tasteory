@@ -9,4 +9,6 @@ public class UserEntity
     public ICollection<RecipeEntity> CreatedRecipes { get; set; } = new List<RecipeEntity>();
     public ICollection<UserGroupEntity> UserGroups { get; set; } = new List<UserGroupEntity>();
     public ICollection<GroupEntity> OwnedGroups { get; set; } = new List<GroupEntity>();
+    public ICollection<UserFavoriteRecipeEntity> FavoriteRecipes { get; set; } = new List<UserFavoriteRecipeEntity>();
+
 }

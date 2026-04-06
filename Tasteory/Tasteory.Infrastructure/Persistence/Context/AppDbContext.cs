@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<IngredientEntity> Ingredients { get; set; }
     public DbSet<StepEntity> Steps { get; set; }
     public DbSet<StepNoteEntity> StepNotes { get; set; }
+    public DbSet<UserFavoriteRecipeEntity> UserFavoriteRecipes { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

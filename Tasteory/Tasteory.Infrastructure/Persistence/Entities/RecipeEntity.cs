@@ -12,7 +12,10 @@ public class RecipeEntity
     public bool IsPrivate { get; set; }
     public int TimeMinutes { get; set; }
     public DateTime CreatedAt { get; set; }
+    public int BasePortions { get; set; }
+    public string[] Tags { get; set; } = Array.Empty<string>();
     public ICollection<IngredientEntity> Ingredients { get; set; } = new List<IngredientEntity>();
     public ICollection<StepEntity> Steps { get; set; } = new List<StepEntity>();
     public ICollection<GroupRecipeEntity> GroupRecipes { get; set; } = new List<GroupRecipeEntity>();
+    public ICollection<UserFavoriteRecipeEntity> FavoritedBy { get; set; } = new List<UserFavoriteRecipeEntity>();
 }
