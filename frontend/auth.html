@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Вход - Tasteory</title>
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/auth/auth.css">
+  <script>
+    if (localStorage.getItem('tasteory_token')) {
+      window.location.href = '/index.html';
+    }
+  </script>
+</head>
+<body>
+
+<div class="auth-wrapper">
+  <div class="auth-box">
+    <div class="auth-logo">Tasteory</div>
+    <h2 id="auth-title">Вход</h2>
+
+    <form id="auth-form">
+      <div class="input-group" id="name-group" style="display: none;">
+        <label for="auth-name"></label><input type="text" id="auth-name" placeholder="Имя">
+      </div>
+      <div class="input-group">
+        <label for="auth-email"></label><input type="email" id="auth-email" placeholder="Email" required>
+      </div>
+      <div class="input-group">
+        <label for="auth-password"></label><input type="password" id="auth-password" placeholder="Пароль" required>
+      </div>
+      <button type="submit" class="auth-btn" id="auth-submit-btn">Войти</button>
+    </form>
+
+    <p class="auth-toggle">
+      <span id="auth-toggle-text">Ещё нет аккаунта?</span>
+      <a href="#" id="auth-toggle-link">Зарегистрироваться</a>
+    </p>
+  </div>
+</div>
+
+<script src="/auth/auth.js"></script>
+</body>
+</html>
