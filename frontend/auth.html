@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Вход</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="/auth/auth.css">
 </head>
@@ -19,12 +16,15 @@
     <div class="auth-form-section">
       <div class="auth-header">
         <div class="logo">Tasteory</div>
+        <button class="close-btn" aria-label="Закрыть">
+          <img src="svg/auth/close.svg" alt="Close">
+          </button>
       </div>
 
       <h1 class="auth-title" id="auth-title">Вход</h1>
-
+      <div class="divider"></div>
       <form id="auth-form">
-        <div class="input-group" id="name-group" style="display: none;">
+        <div class="input-group" id="name-group">
           <label for="auth-name">Имя пользователя</label>
           <input type="text" id="auth-name" placeholder="Введите имя и фамилию">
         </div>
@@ -39,6 +39,9 @@
           <div class="password-wrapper">
             <input type="password" id="auth-password" placeholder="Введите пароль" required>
             <button type="button" class="toggle-password" id="toggle-password">
+              <!-- Иконка глаза -->
+              <img src="svg/auth/eye.svg" alt="Password eye">
+              <!--TODO: сделать анимацию и логику "мигания" глаза -->
             </button>
           </div>
         </div>
