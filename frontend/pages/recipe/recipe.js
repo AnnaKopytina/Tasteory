@@ -53,7 +53,7 @@ const recipeMockData = {
     ]
 };
 
-window.initRecipePage = function(id) {
+export function initRecipePage(id) {
     const root = document.getElementById('content-root');
     const data = recipeMockData;
 
@@ -87,7 +87,6 @@ window.initRecipePage = function(id) {
             </div>
         </div>
         <div class="page-card">
-         <!-- INGREDIENTS -->
             <div class="ingredients-block">
                 <div class="ingredients-header">
                     <h2>Ингредиенты <span class="ing-count">${countTotalIngredients(data)}</span></h2>
@@ -116,9 +115,8 @@ window.initRecipePage = function(id) {
             </div>
         </div>
     `;
-};
+}
 
-// Вспомогательные функции
 function countTotalIngredients(data) {
     return data.ingredientsGroups.reduce((acc, g) => acc + g.items.length, 0);
 }
@@ -132,7 +130,7 @@ function renderIngredients(data) {
             <div class="ing-group-header">
                 <span>${group.name}</span>
                 <button onclick="watchIng(${i})">
-                    <img src="/svg/recipe/pointer.svg" class="arrow-icon ${isOpen ? 'active' : ''}">
+                    <img src="/svg/recipe/pointer.svg" alt="Раскрыть" class="arrow-icon ${isOpen ? 'active' : ''}">
                 </button>
             </div>
             <ul class="ing-items ${isOpen ? '' : 'hidden'}">
@@ -151,31 +149,31 @@ function renderIngredients(data) {
     `}).join('');
 }
 
-window.watchIng = function(index) {
+function watchIng(index) {
     const groups = document.querySelectorAll('.ing-group');
     const targetGroup = groups[index];
     if (!targetGroup) return;
 
     const list = targetGroup.querySelector('.ing-items');
     const arrow = targetGroup.querySelector('.arrow-icon');
-    const isNowOpen = list.classList.toggle('hidden');
+    list.classList.toggle('hidden');
     arrow.classList.toggle('active');
     recipeMockData.ingredientsGroups[index].isOpen = !list.classList.contains('hidden');
-};
+}
 
-window.changeServings = function(delta) {
+function changeServings(delta) {
     const data = recipeMockData;
     const newVal = data.currentServings + delta;
     if (newVal >= 1 && newVal <= 20) {
         data.currentServings = newVal;
         initRecipePage(data.id); // Перерисовываем
     }
-};
+}
 
-window.toggleFavorite = function() {
+function toggleFavorite() {
     recipeMockData.isFavorite = !recipeMockData.isFavorite;
     initRecipePage(recipeMockData.id);
-};
+}
 
 /* ШАГИ */
 let originalNoteValue = "";
@@ -195,7 +193,7 @@ function renderSteps(data) {
         <div class="step-card" id="step-${i}">
             <h3>Шаг ${step.number}</h3>
             <div class="${layoutClass}">
-                ${hasMedia ? `<img src="${step.media.url}" class="step-img">` : ''}
+                ${hasMedia ? `<img src="${step.media.url}" alt="Иллюстрация шага ${step.number}" class="step-img">` : ''}
                 ${hasText ? `<p class="step-text">${step.text}</p>` : ''}
             </div>
             <div class="note-area" id="note-area-${i}">
@@ -218,7 +216,7 @@ function renderNoteElement(note, index) {
         <div class="note-wrapper">
             <!-- Кнопка удаления -->
             <button class="note-control-btn btn-delete" onclick="deleteNote(${index})" title="Удалить">
-                <img class="icon-close" width="16" height="16" src="/svg/sidebar/plus.svg" title="Удалить">
+                <img class="icon-close" width="16" height="16" src="/svg/sidebar/plus.svg" alt="Удалить" title="Удалить">
             </button>
             
             <!-- заметка -->
@@ -239,33 +237,44 @@ function renderNoteElement(note, index) {
 }
 
 /* ИНТЕРАКТИВА С ЗАМЕТКОЙ*/
-window.addNote = function(index) {
+function addNote(index) {
     recipeMockData.steps[index].note = "Напишите здесь вашу заметку...";
     const area = document.getElementById(`note-area-${index}`);
     area.innerHTML = renderNoteElement(recipeMockData.steps[index].note, index);
     area.querySelector('.note-paper').focus();
-};
+}
 
-window.deleteNote = function(index) {
+function deleteNote(index) {
     recipeMockData.steps[index].note = null;
     document.getElementById(`note-area-${index}`).innerHTML = renderNoteElement(null, index);
     console.log(`Заметка удалена из шага ${index + 1} `);
-};
+}
 
-window.focusNote = function(index, el) {
+function focusNote(index, el) {
     originalNoteValue = el.innerText;
-};
+}
 
-window.showSave = function(index) {
+function showSave(index) {
     const btn = document.getElementById(`save-btn-${index}`);
     btn.classList.remove('hidden');
-};
+}
 
-window.saveNote = function(index) {
+function saveNote(index) {
     const textarea = document.getElementById(`note-input-${index}`);
     const btn = document.getElementById(`save-btn-${index}`);
 
     recipeMockData.steps[index].note = textarea.value;
     btn.classList.add('hidden');
     console.log("Заметка изменена ", textarea.value);
-};
+}
+
+Object.assign(window, {
+    watchIng,
+    changeServings,
+    toggleFavorite,
+    addNote,
+    deleteNote,
+    focusNote,
+    showSave,
+    saveNote
+});
