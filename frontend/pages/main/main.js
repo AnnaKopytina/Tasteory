@@ -1,15 +1,14 @@
-window.initMainPage = function() {
+export function initMainPage() {
     const root = document.getElementById('content-root');
     root.innerHTML = `
-        <div class="page-card">
-            <h1>Главная лента</h1>
-            <div style="display: grid; gap: 20px; margin-top: 20px;">
-                <!-- Ссылка на рецепт -->
-                <a href="/recipe?id=5165161655665" class="recipe-card" style="text-decoration: none; color: inherit; border: 1px solid #eee; padding: 15px; border-radius: 20px; display: block;">
-                    <h3>Полезный салат (Кликни меня)</h3>
-                    <p>Лучший рецепт весны...</p>
+        <section class="page-card main-page">
+            <h1>Главная</h1>
+            <div class="main-page__feed">
+                <a href="/recipe?id=5165161655665" class="recipe-card">
+                    <h3>Полезный салат</h3>
+                    <span class="recipe-card__action">Открыть рецепт →</span>
                 </a>
             </div>
-        </div>
+        </section>
     `;
-};
+}
