@@ -3,6 +3,7 @@
 .sidebar {
     width: fit-content;
     height: 100vh;
+    box-sizing: border-box;
     background-color: #ffffff;
     position: sticky;
     top: 0;
