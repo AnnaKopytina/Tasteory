@@ -3,8 +3,8 @@
     const loadingStyles = new Map();
 
     const routes = {
-        '/': { title: 'Главная', css: '/pages/main/main.css', module: '../pages/main/main.js', initKey: 'initMainPage' },
-        '/main': { title: 'Главная', css: '/pages/main/main.css', module: '../pages/main/main.js', initKey: 'initMainPage' },
+        '/': { title: 'Главная', css: ['/pages/main/main.css', '/components/recipe-card/recipe-card.css'], module: '../pages/main/main.js', initKey: 'initMainPage' },
+        '/main': { title: 'Главная', css: ['/pages/main/main.css', '/components/recipe-card/recipe-card.css'], module: '../pages/main/main.js', initKey: 'initMainPage' },
         '/recipe': { title: 'Рецепт', css: '/pages/recipe/recipe.css', module: '../pages/recipe/recipe.js', initKey: 'initRecipePage' },
         '/create': { title: 'Создать', css: '/pages/create/create.css', module: '../pages/create/create.js', initKey: 'initCreatePage' },
         '/favorite': { title: 'Избранное', css: '/pages/favorite/favorite.css', module: '../pages/favorite/favorite.js', initKey: 'initFavoritePage' },
@@ -121,7 +121,8 @@
     }
 
     async function loadRouteAssets(route) {
-        await ensureStylesheet(route.css);
+        const cssFiles = Array.isArray(route.css) ? route.css : [route.css];
+        await Promise.all(cssFiles.filter(Boolean).map(ensureStylesheet));
     }
 
     function resolveInitFn(route, pageModule) {
