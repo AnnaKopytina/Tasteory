@@ -126,14 +126,20 @@ public class GroupsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/recipes")]
-    public ActionResult<List<RecipeResponse>> GetGroupRecipes(Guid id)
+    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetGroupRecipes(Guid id,
+        [FromQuery] PaginationQuery query)
     {
-        return Ok(new List<object> { new { title = "Семейный пирог", id = Guid.NewGuid() } });
+        var result = await _groupService.GetGroupRecipesPagedAsync(id, query);
+        return Ok(result);
     }
 
     [HttpPost("{id:guid}/recipes")]
-    public IActionResult AddRecipeToGroup(Guid id, [FromBody] Guid recipeId)
+    public async Task<IActionResult> AddRecipeToGroup(Guid id, [FromBody] Guid recipeId)
     {
-        return StatusCode(201, new { message = "Рецепт теперь доступен всей семье" });
+        var userId = User.GetUserId();
+
+        await _groupService.AddRecipeToGroupAsync(userId, id, recipeId);
+
+        return Ok(new { message = "Рецепт успешно добавлен в группу", recipeId });
     }
 }
