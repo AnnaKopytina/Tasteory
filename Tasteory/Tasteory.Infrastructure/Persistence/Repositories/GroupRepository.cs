@@ -141,7 +141,7 @@ public class GroupRepository : IGroupRepository
             await _context.SaveChangesAsync();
         }
     }
-    
+
     public async Task UpdateGroupNameAsync(Guid groupId, string newName)
     {
         var groupEntity = await _context.Groups.FindAsync(groupId);
@@ -157,5 +157,45 @@ public class GroupRepository : IGroupRepository
     {
         return await _context.GroupInvites
             .AnyAsync(i => i.Code == code);
+    }
+
+    public async Task<(List<RecipeSummary> Items, int TotalCount)> GetGroupRecipesPagedAsync(Guid groupId, int page, int pageSize)
+    {
+        var query = _context.Recipes
+            .AsNoTracking()
+            .Where(r => _context.GroupRecipes.Any(gr => gr.GroupId == groupId && gr.RecipeId == r.Id));
+
+        var totalCount = await query.CountAsync();
+
+        if (totalCount == 0)
+        {
+            return (new List<RecipeSummary>(), 0);
+        }
+        
+        var items = await query
+            .OrderByDescending(r => r.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ProjectTo<RecipeSummary>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+
+        return (items, totalCount);
+    }
+
+    public async Task<bool> IsRecipeInGroupAsync(Guid groupId, Guid recipeId)
+    {
+        return await _context.GroupRecipes
+            .AnyAsync(gr => gr.GroupId == groupId && gr.RecipeId == recipeId);
+    }
+
+    public async Task AddRecipeToGroupAsync(Guid groupId, Guid recipeId)
+    {
+        await _context.GroupRecipes.AddAsync(new GroupRecipeEntity
+        {
+            GroupId = groupId,
+            RecipeId = recipeId
+        });
+
+        await _context.SaveChangesAsync();
     }
 }
