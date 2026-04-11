@@ -1,42 +1,50 @@
-@import url('https://fonts.googleapis.com/css2?family=Titan+One&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Titan+One&display=swap');
 
 .sidebar {
-    width: 280px;
+    width: fit-content;
     height: 100vh;
     background-color: #ffffff;
-    position: fixed;
-    border-radius: 0 40px;
-    padding: 40px 20px;
+    position: sticky;
+    top: 0;
+    border-radius: 0 30px 30px 0;
+    padding: 50px 30px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
+    font-family: var(--font-montserrat, sans-serif);
 }
 
 .logo {
     font-family: 'Titan One', cursive;
-    font-size: 40px;
+    font-size: 48px;
     color: #f28c50;
-    text-align: center;
-    margin-bottom: 50px;
+    margin: 0 0 50px;
     width: 100%;
+    line-height: 110%;
 }
 
 .side-nav {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    width: max-content;
 }
 
 .nav-item, .sub-item {
     display: flex;
     align-items: center;
+    gap: 5px;
     text-decoration: none;
     color: #333;
-    padding: 14px 20px;
-    border-radius: 18px;
+    padding: 10px 20px;
+    border-radius: 14px;
     transition: 0.3s;
-    font-size: 18px;
+    font-size: 28px;
+    line-height: 145%;
     font-weight: 500;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .nav-item:hover, .sub-item:hover {
@@ -49,9 +57,13 @@
 }
 
 .icon {
-    width: 18px;
-    height: 18px;
-    margin-right: 15px;
+    width: 29px;
+    height: 29px;
+    flex-shrink: 0;
+}
+
+#toggle-groups {
+    gap: 12px;
 }
 
 .group-header {
@@ -66,9 +78,9 @@
 .sub-menu {
     display: none;         /* Скрыто */
     flex-direction: column;
-    gap: 5px;
-    padding-left: 15px;
-    margin-top: 5px;
+    gap: 4px;
+    padding-left: 10px;
+    margin-top: 2px;
 }
 
 .sub-item.active {
