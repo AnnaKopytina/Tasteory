@@ -1,12 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap');
+
+:root {
+    --font-montserrat: 'Montserrat', 'Inter', sans-serif;
+}
+
 body {
     margin: 0;
     background-color: #f7f3f0;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-montserrat), sans-serif;
     display: flex;
 }
 
 .content-area {
-    margin-left: 320px;
     padding: 40px;
     width: 100%;
     box-sizing: border-box;
