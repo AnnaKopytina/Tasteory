@@ -140,6 +140,6 @@ public class GroupsController : ControllerBase
 
         await _groupService.AddRecipeToGroupAsync(userId, id, recipeId);
 
-        return Ok(new { message = "Рецепт успешно добавлен в группу", recipeId });
+        return Ok(new { message = "Recipe successfully added to group", recipeId });
     }
 }

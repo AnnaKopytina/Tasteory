@@ -216,7 +216,7 @@ public class GroupService : IGroupService
         
         if (alreadyInGroup)
         {
-            throw new AlreadyExistsException("User is already in this group.");
+            throw new AlreadyExistsException("Recipe is already in this group.");
         }
 
         await _groupRepository.AddRecipeToGroupAsync(groupId, recipeId);
