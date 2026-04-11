@@ -22,4 +22,10 @@ public interface IGroupRepository
     public Task RemoveUserFromGroupAsync(Guid userId, Guid groupId);
     public Task UpdateGroupNameAsync(Guid groupId, string newName);
     public Task<bool> IsInviteCodeExistsAsync(string code);
+
+    public Task<(List<RecipeSummary> Items, int TotalCount)> GetGroupRecipesPagedAsync(Guid groupId, int page,
+        int pageSize);
+
+    public Task<bool> IsRecipeInGroupAsync(Guid groupId, Guid recipeId);
+    public Task AddRecipeToGroupAsync(Guid groupId, Guid recipeId);
 }
