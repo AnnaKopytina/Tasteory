@@ -24,9 +24,12 @@ public class RecipeRepository : IRecipeRepository
     {
         var entity = _mapper.Map<RecipeEntity>(recipe);
         
+        entity.Ingredients = _mapper.Map<List<IngredientEntity>>(recipe.Ingredients);
+        entity.Steps = _mapper.Map<List<StepEntity>>(recipe.Steps);
+
         await _context.Recipes.AddAsync(entity);
         await _context.SaveChangesAsync();
-        
+
         return entity.Id;
     }
 
