@@ -1,3 +1,4 @@
+using Amazon.S3;
 using Application.DTO.Responses;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
@@ -6,10 +7,12 @@ using Application.Validation;
 using DotNetEnv;
 using FluentValidation;
 using FluentValidation.AspNetCore;
+using Infrastructure.Media;
 using Infrastructure.Persistence.Context;
 using Infrastructure.Persistence.Repositories;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Prometheus;
 using Serilog;
 using Serilog.Events;
@@ -52,6 +55,24 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
     connectionString = $"Host=localhost;Port={dbPort};Database={dbName};Username={dbUser};Password={dbPass}";
 }
+
+builder.Services.Configure<S3Options>(builder.Configuration.GetSection(S3Options.SectionName));
+
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+{
+    var cfg = sp.GetRequiredService<IOptions<S3Options>>().Value;
+    
+    return new AmazonS3Client(cfg.AccessKey, cfg.SecretKey, new AmazonS3Config
+    {
+        ServiceURL = cfg.Endpoint,
+        ForcePathStyle = true,
+        AuthenticationRegion = "ru-central1"
+    });
+});
+
+builder.Services.AddScoped<IFileStorageService, S3FileStorageService>();
+builder.Services.AddScoped<IMediaService, MediaService>();
+
 
 builder.Services.AddDbContext<AppDbContext>(options => { options.UseNpgsql(connectionString); });
 

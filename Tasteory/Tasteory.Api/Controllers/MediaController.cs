@@ -1,41 +1,43 @@
 using Application.DTO.Responses;
+using Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Tasteory.Controllers;
 
 [ApiController]
 [Route("api/media")]
+[Authorize]
+[RequestSizeLimit(100_000_000)] //100 MB
 public class MediaController : ControllerBase
 {
-    [HttpPost("upload")]
-    public async Task<ActionResult<UploadMediaResponse>> UploadPhoto(IFormFile file)
+    private readonly IMediaService _mediaService;
+
+    public MediaController(IMediaService mediaService)
     {
-        if (file == null || file.Length == 0) 
-            return BadRequest("Файл не пришел");
-
-        var extension = Path.GetExtension(file.FileName).ToLower();
-        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
-        
-        if (!allowedExtensions.Contains(extension))
-            return BadRequest("Разрешены только изображения (jpg, png, webp)");
-
-        var fileName = $"{Guid.NewGuid()}{extension}";
-        
-        // здесь путь к облаку
-        var mockUrl = $"лалала/{fileName}";
-
-        var response = new UploadMediaResponse(
-            MediaId: Guid.NewGuid(),
-            Url: mockUrl,
-            Type: "photo"
-        );
-
-        return Created(mockUrl, response);
+        _mediaService = mediaService;
     }
-    
-    [HttpDelete("{mediaId:guid}")]
-    public IActionResult DeleteMedia(Guid mediaId)
+
+    [HttpPost("upload")]
+    public async Task<ActionResult<MediaUploadResponse>> Upload(IFormFile file)
     {
+        using var stream = file.OpenReadStream();
+        var result = await _mediaService.UploadAsync(stream, file.FileName, file.ContentType, file.Length);
+
+        return Ok(result);
+    }
+
+    [HttpDelete("file")]
+    public async Task<IActionResult> Delete([FromQuery] string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return BadRequest("URL is required");
+        }
+
+        var storage = HttpContext.RequestServices.GetRequiredService<IFileStorageService>();
+        await storage.DeleteAsync(url);
+
         return NoContent();
     }
 }
