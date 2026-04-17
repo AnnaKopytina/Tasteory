@@ -5,43 +5,46 @@
     <title>Tasteory</title>
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/pages/sidebar/sidebar.css">
+    <link rel="stylesheet" href="/pages/group/group-modal.css">
 </head>
 <body>
 
+<!-- Меню -->
 <aside class="sidebar">
     <div class="logo">Tasteory</div>
 
     <nav class="side-nav">
         <a href="/main" class="nav-item active" data-page="Главная">
-            <img class="icon" src="/svg/sidebar/book.svg">
+            <span class="icon" data-icon="book" aria-hidden="true"></span>
             <span>Главная</span>
         </a>
 
         <a href="/create" class="nav-item" data-page="Создать рецепт">
-            <img class="icon" src="/svg/sidebar/plus.svg">
+            <span class="icon" data-icon="plus" aria-hidden="true"></span>
             <span>Создать рецепт</span>
         </a>
 
         <div class="nav-group">
             <div class="nav-item group-header">
-                <div id="toggle-groups" style="display: flex; align-items: center;">
-                    <img class="icon" src="/svg/sidebar/openIcon.svg">
+                <span id="toggle-groups" role="button" tabindex="0" aria-expanded="false" aria-controls="groups-list">
+                    <span class="icon" data-icon="openIcon" aria-hidden="true"></span>
                     <span>Мои группы</span>
-                </div>
-                <!-- Плюсик -->
-                <img class="icon add-btn" id="add-group-btn" src="/svg/sidebar/plus.svg" title="Добавить группу">
+                </span>
+                <button type="button" class="add-btn" id="add-group-btn" title="Добавить группу" aria-label="Добавить группу">
+                    <span class="icon" data-icon="plus" aria-hidden="true"></span>
+                </button>
             </div>
             <div class="sub-menu" id="groups-list">
             </div>
         </div>
 
         <a href="/favorite" class="nav-item" data-page="Избранное">
-            <img class="icon" src="/svg/sidebar/fovorite.svg">
+            <span class="icon" data-icon="favorite" aria-hidden="true"></span>
             <span>Избранное</span>
         </a>
 
         <a href="/profile" class="nav-item" data-page="Профиль">
-            <img class="icon" src="/svg/sidebar/profile.svg">
+            <span class="icon" data-icon="profile" aria-hidden="true"></span>
             <span>Профиль</span>
         </a>
     </nav>
@@ -51,6 +54,9 @@
 <main class="content-area" id="content-root"></main>
 
 <script src="/services/api.js"></script>
+<script src="/core/utils.js"></script>
+<script src="/components/icons/icons.js"></script>
+<script src="/components/modals/group-create-modal.js"></script>
 <script src="/core/router.js"></script>
 <script src="/pages/sidebar/sidebar.js"></script>
 </body>
