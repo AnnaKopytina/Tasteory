@@ -1,12 +1,12 @@
-import { RecipeCard } from '../../components/recipe-card/RecipeCard.js';
-import { SearchFilters } from '../../components/search-filters/SearchFilters.js';
+import {RecipeCard} from '../../components/recipe-card/RecipeCard.js';
+import {SearchFilters} from '../../components/search-filters/SearchFilters.js';
 
 const mockRecipes = [
     {
         id: '1',
         title: 'Полезный салат со свежими овощами',
         image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=500&auto=format&fit=crop',
-        author: 'Васильковой Галиной',
+        author: 'Василькова Галина',
         time: 20,
         servings: 2,
         isFavorite: false
@@ -14,7 +14,7 @@ const mockRecipes = [
     {
         id: '2',
         title: 'Паста с томатным соусом',
-        image: 'https://images.unsplash.com/photo-1473093295203-cec9a50e9053?q=80&w=500&auto=format&fit=crop',
+        image: 'https://img.povar.ru/main-micro/00/00/6c/83/spagetti_chetire_pomidora-825929.jpg',
         author: 'Петров Иван',
         time: 25,
         servings: 4,
@@ -24,7 +24,7 @@ const mockRecipes = [
         id: '3',
         title: 'Шоколадное печенье',
         image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=500&auto=format&fit=crop',
-        author: 'Сидоровой Марией',
+        author: 'Сидорова Мария',
         time: 30,
         servings: 12,
         isFavorite: false
