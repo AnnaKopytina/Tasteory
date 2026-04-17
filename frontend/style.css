@@ -2,41 +2,23 @@
 
 :root {
     --font-montserrat: 'Montserrat', 'Inter', sans-serif;
+    --color-dark-green: #5E7222;
+    --border-color: #97A2B0;
+    --input-color: #97A2B0;
 }
 
 body {
     margin: 0;
-    background-color: #f7f3f0;
+    background-color: #F6F1ED;
     font-family: var(--font-montserrat), sans-serif;
     display: flex;
 }
 
 .content-area {
-    padding: 40px;
-    width: 100%;
+    position: relative;
     box-sizing: border-box;
-}
-
-
-.page-card {
-    background: white;
-    border-radius: 20px;
-    padding: 20px;
-    margin: 0 0 20px 20px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.03);
-}
-
-.page-card h1 {
-    font-size: 36px;
-    margin: 0;
-    color: #333;
-}
-
-.page-card h2 {
-    margin: 0 0 10px;
-}
-
-.page-description {
-    margin: 8px 0 0;
-    color: #666;
+    flex: 1;
+    padding: 20px 20px 20px 30px;
+    min-width: 0;
+    min-height: 100vh;
 }
