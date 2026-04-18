@@ -35,7 +35,7 @@ function createSectionHtml() {
     const sectionId = nextSectionId();
     return `
         <article class="create-section" data-role="section" data-id="${sectionId}">
-            <div class="create-row create-row--top">
+            <div class="create-section__head">
                 <input class="create-input" type="text" placeholder="Название секции" data-field="section-name" />
                 <button class="icon-btn" type="button" data-action="remove-section" title="Удалить секцию" aria-label="Удалить секцию">
                     ${renderDeleteIcon()}
@@ -57,14 +57,14 @@ function createStepHtml() {
     const stepId = nextStepId();
     return `
         <article class="create-step" data-role="step" data-id="${stepId}">
-            <div class="create-row create-row--top">
+            <div class="create-step__head">
                 <textarea class="create-input create-textarea" rows="4" placeholder="Опишите шаг приготовления" data-field="description"></textarea>
                 <button class="icon-btn" type="button" data-action="remove-step" title="Удалить шаг" aria-label="Удалить шаг">
                     ${renderDeleteIcon()}
                 </button>
             </div>
 
-            <div class="create-row create-row--between">
+            <div class="create-step__media">
                 <button class="create-btn create-btn--small" type="button" data-action="upload-step-photo">
                     Загрузить фото шага
                 </button>
@@ -82,14 +82,30 @@ function clampServings(value) {
 
 function updateServings(container, delta) {
     const input = container.querySelector('[data-role="servings-value"]');
+    if (!input) {
+        return;
+    }
+
     const current = Number(input.value) || MIN_SERVINGS;
     input.value = clampServings(current + delta);
 }
 
 function ensureAtLeastOneBlock(container, blockCreator) {
+    if (!container) {
+        return;
+    }
+
     if (!container.children.length) {
         container.insertAdjacentHTML('beforeend', blockCreator());
     }
+}
+
+function appendHtml(container, htmlBuilder) {
+    container?.insertAdjacentHTML('beforeend', htmlBuilder());
+}
+
+function getClosestByRole(element, role) {
+    return element?.closest(`[data-role="${role}"]`) || null;
 }
 
 function collectRecipeDraft(form) {
@@ -131,17 +147,17 @@ export function initCreatePage() {
 
             <form class="create-form" novalidate>
                 <section class="create-block">
-                    <input class="create-input" type="text" placeholder="Название рецепта" data-field="title" />
-                    <input class="create-input" type="number" min="1" placeholder="Время приготовления (мин)" data-field="cook-time" />
+                    <div class="create-stack">
+                        <input class="create-input" type="text" placeholder="Название рецепта" data-field="title" />
+                        <input class="create-input" type="number" min="1" placeholder="Время приготовления (мин)" data-field="cook-time" />
+                    </div>
 
                     <div class="create-row create-row--split">
                         <button class="create-btn" type="button" data-action="upload-cover">Загрузить обложку</button>
                         <button class="create-btn" type="button" data-action="add-to-group">Добавить в группу</button>
                     </div>
 
-                    <div class="create-file-row">
-                        <span class="create-file-name" data-role="cover-file-name">Обложка не выбрана</span>
-                    </div>
+                    <span class="create-file-name" data-role="cover-file-name">Обложка не выбрана</span>
 
                     <input type="file" accept="image/*" class="create-hidden-input" data-role="cover-input" />
                 </section>
@@ -158,15 +174,18 @@ export function initCreatePage() {
                         </div>
                     </div>
 
-                    <div class="create-sections" data-role="sections"></div>
-
-                    <button class="create-btn create-btn--center" type="button" data-action="add-section">+ Секция</button>
+                    <div class="create-collection">
+                        <div class="create-sections" data-role="sections"></div>
+                        <button class="create-btn create-btn--center" type="button" data-action="add-section">+ Секция</button>
+                    </div>
                 </section>
 
                 <section class="create-block">
                     <h2 class="create-block__title">Шаги приготовления</h2>
-                    <div class="create-steps" data-role="steps"></div>
-                    <button class="create-btn create-btn--center" type="button" data-action="add-step">+ Шаг</button>
+                    <div class="create-collection">
+                        <div class="create-steps" data-role="steps"></div>
+                        <button class="create-btn create-btn--center" type="button" data-action="add-step">+ Шаг</button>
+                    </div>
                 </section>
 
                 <button class="create-btn create-btn--submit" type="submit">Создать</button>
@@ -185,6 +204,39 @@ export function initCreatePage() {
     sectionsContainer.insertAdjacentHTML('beforeend', createSectionHtml());
     stepsContainer.insertAdjacentHTML('beforeend', createStepHtml());
 
+    const actionHandlers = {
+        'upload-cover': () => coverInput.click(),
+        'add-to-group': () => {
+            status.textContent = 'Выбор группы будет доступен на следующем этапе.';
+        },
+        'dec-servings': () => updateServings(form, -1),
+        'inc-servings': () => updateServings(form, 1),
+        'add-section': () => appendHtml(sectionsContainer, createSectionHtml),
+        'remove-section': ({ actionEl }) => {
+            getClosestByRole(actionEl, 'section')?.remove();
+            ensureAtLeastOneBlock(sectionsContainer, createSectionHtml);
+        },
+        'add-ingredient': ({ actionEl }) => {
+            const section = getClosestByRole(actionEl, 'section');
+            appendHtml(section?.querySelector('[data-role="ingredients"]'), createIngredientRowHtml);
+        },
+        'remove-ingredient': ({ actionEl }) => {
+            const row = getClosestByRole(actionEl, 'ingredient-row');
+            const section = getClosestByRole(actionEl, 'section');
+            row?.remove();
+            ensureAtLeastOneBlock(section?.querySelector('[data-role="ingredients"]'), createIngredientRowHtml);
+        },
+        'add-step': () => appendHtml(stepsContainer, createStepHtml),
+        'remove-step': ({ actionEl }) => {
+            getClosestByRole(actionEl, 'step')?.remove();
+            ensureAtLeastOneBlock(stepsContainer, createStepHtml);
+        },
+        'upload-step-photo': ({ actionEl }) => {
+            const step = getClosestByRole(actionEl, 'step');
+            step?.querySelector('[data-role="step-file-input"]')?.click();
+        }
+    };
+
     form.addEventListener('click', (event) => {
         const actionEl = event.target.closest('[data-action]');
         if (!actionEl) {
@@ -196,83 +248,29 @@ export function initCreatePage() {
             return;
         }
 
-        switch (action) {
-            case 'upload-cover': {
-                coverInput.click();
-                break;
-            }
-            case 'add-to-group': {
-                status.textContent = 'Выбор группы будет доступен на следующем этапе.';
-                break;
-            }
-            case 'dec-servings': {
-                updateServings(form, -1);
-                break;
-            }
-            case 'inc-servings': {
-                updateServings(form, 1);
-                break;
-            }
-            case 'add-section': {
-                sectionsContainer.insertAdjacentHTML('beforeend', createSectionHtml());
-                break;
-            }
-            case 'remove-section': {
-                actionEl.closest('[data-role="section"]')?.remove();
-                ensureAtLeastOneBlock(sectionsContainer, createSectionHtml);
-                break;
-            }
-            case 'add-ingredient': {
-                const section = actionEl.closest('[data-role="section"]');
-                section?.querySelector('[data-role="ingredients"]')?.insertAdjacentHTML('beforeend', createIngredientRowHtml());
-                break;
-            }
-            case 'remove-ingredient': {
-                const row = actionEl.closest('[data-role="ingredient-row"]');
-                const section = actionEl.closest('[data-role="section"]');
-                row?.remove();
-                const ingredientsContainer = section?.querySelector('[data-role="ingredients"]');
-                ensureAtLeastOneBlock(ingredientsContainer, createIngredientRowHtml);
-                break;
-            }
-            case 'add-step': {
-                stepsContainer.insertAdjacentHTML('beforeend', createStepHtml());
-                break;
-            }
-            case 'remove-step': {
-                actionEl.closest('[data-role="step"]')?.remove();
-                ensureAtLeastOneBlock(stepsContainer, createStepHtml);
-                break;
-            }
-            case 'upload-step-photo': {
-                const step = actionEl.closest('[data-role="step"]');
-                const input = step?.querySelector('[data-role="step-file-input"]');
-                input?.click();
-                break;
-            }
-            default:
-                break;
-        }
+        actionHandlers[action]?.({ actionEl, event });
     });
 
     form.addEventListener('change', (event) => {
-        if (event.target === coverInput) {
+        const target = event.target;
+
+        if (target === coverInput) {
             coverFileName.textContent = coverInput.files?.[0]?.name || 'Обложка не выбрана';
             return;
         }
 
-        if (event.target.matches('[data-role="step-file-input"]')) {
-            const step = event.target.closest('[data-role="step"]');
+        if (target.matches('[data-role="step-file-input"]')) {
+            const step = getClosestByRole(target, 'step');
             const fileNameEl = step?.querySelector('[data-role="step-file-name"]');
             if (fileNameEl) {
-                fileNameEl.textContent = event.target.files?.[0]?.name || 'Фото не выбрано';
+                fileNameEl.textContent = target.files?.[0]?.name || 'Фото не выбрано';
             }
             return;
         }
 
-        if (event.target.matches('[data-role="servings-value"]')) {
-            const value = Number(event.target.value) || MIN_SERVINGS;
-            event.target.value = clampServings(value);
+        if (target.matches('[data-role="servings-value"]')) {
+            const value = Number(target.value) || MIN_SERVINGS;
+            target.value = clampServings(value);
         }
     });
 
