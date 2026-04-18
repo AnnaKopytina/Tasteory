@@ -47,16 +47,19 @@ public class UserRepository : IUserRepository
     }
 
 
-    public async Task UpdateAsync(User user, string newUserName)
+    public async Task UpdateAsync(User user)
     {
         var userEntity = await _context.Users.FindAsync(user.Id);
-
+        
         if (userEntity is null)
         {
             return;
         }
 
-        userEntity.UserName = newUserName;
+        userEntity.DisplayName = user.DisplayName;
+        userEntity.UserName = user.UserName;
+        userEntity.Email = user.Email;
+        userEntity.AvatarUrl = user.AvatarUrl;
 
         await _context.SaveChangesAsync();
     }
@@ -92,12 +95,23 @@ public class UserRepository : IUserRepository
 
         return (groups, totalCount);
     }
-    
+
     public async Task<Dictionary<Guid, string>> GetUserNamesByIdsAsync(IEnumerable<Guid> userIds)
     {
         return await _context.Users
             .AsNoTracking()
             .Where(u => userIds.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id, u => u.UserName);
+            .ToDictionaryAsync(u => u.Id, u => u.DisplayName);
+    }
+
+    public async Task<User?> GetByUsernameAsync(string username)
+    {
+        var entity = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserName == username);
+        return entity is null ? null : _mapper.Map<User>(entity);
+    }
+
+    public async Task<bool> UsernameExistsAsync(string username)
+    {
+        return await _context.Users.AnyAsync(u => u.UserName == username);
     }
 }

@@ -6,7 +6,7 @@ namespace Application.Services;
 
 public class UserService : IUserService
 {
-    private IUserRepository _userRepository;
+    private readonly IUserRepository _userRepository;
 
     public UserService(IUserRepository userRepository)
     {
@@ -18,7 +18,7 @@ public class UserService : IUserService
         return await _userRepository.GetByIdAsync(userId);
     }
 
-    public async Task<User?> UpdateUserAsync(Guid userId, string newName)
+    public async Task<User?> UpdateUserAsync(Guid userId, string? newDisplayName, string? newAvatarUrl)
     {
         var user = await _userRepository.GetByIdAsync(userId);
 
@@ -27,8 +27,17 @@ public class UserService : IUserService
             return null;
         }
 
-        await _userRepository.UpdateAsync(user, newName);
+        if (newDisplayName is not null)
+        {
+            user.UpdateDisplayName(newDisplayName);
+        }
 
+        if (newAvatarUrl is not null)
+        {
+            user.UpdateAvatar(newAvatarUrl);
+        }
+
+        await _userRepository.UpdateAsync(user);
         return user;
     }
 
