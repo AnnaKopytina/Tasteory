@@ -74,18 +74,81 @@
 
 .profile-edit-btn {
     display: flex;
+	align-items: center;
+	justify-content: center;
     border: none;
-    padding: 15px 50px;
-    border-radius: 20px;
+	width: 190px;
+	min-height: 44px;
+	padding: 10px 18px;
+	border-radius: 14px;
     background: var(--color-dark-green);
     color: #fff;
     font: inherit;
-    font-size: 18px;
+	font-weight: 500;
+	font-size: 16px;
     cursor: pointer;
 }
 
 .profile-edit-btn:hover {
     filter: brightness(1.05);
+}
+
+.profile-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.profile-logout-control {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.profile-logout-icon-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 44px;
+	border-radius: 14px;
+	border: 1px solid var(--border-color);
+	background: #fff;
+	color: #233747;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.profile-logout-icon-btn:hover {
+	background: #f5f7f9;
+}
+
+.profile-logout-icon {
+	width: 20px;
+	height: 20px;
+}
+
+.profile-logout-btn {
+	display: flex;
+	justify-content: center;
+	border: 1px solid #d6dbe2;
+	width: 136px;
+	min-height: 44px;
+	padding: 10px 18px;
+	border-radius: 14px;
+	background: #fff;
+	color: #233747;
+	font: inherit;
+	font-size: 16px;
+	cursor: pointer;
+}
+
+.profile-logout-btn:hover {
+	background: #f5f7f9;
+}
+
+.profile-logout-control:not(.is-open) .profile-logout-btn {
+	display: none;
 }
 
 .profile-tabs {

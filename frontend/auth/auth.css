@@ -20,7 +20,7 @@ body {
 .auth-illustration {
     flex: 1;
     background-color: #fdf8f4;
-    background-image: url('svg/auth/installation.svg');
+    background-image: url('frontend/svg/auth/installation.svg');
     background-size: cover;
     background-position: left;
     background-repeat: no-repeat;

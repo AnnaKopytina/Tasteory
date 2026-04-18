@@ -86,6 +86,13 @@
                 <circle cx="12" cy="12" r="1.5" fill="currentColor" />
                 <circle cx="12" cy="19" r="1.5" fill="currentColor" />
             </svg>
+        `,
+        logout: `
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+                <path d="M14 4H8C6.89543 4 6 4.89543 6 6V18C6 19.1046 6.89543 20 8 20H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 12H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18 8L22 12L18 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
         `
     };
 

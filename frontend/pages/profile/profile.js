@@ -46,6 +46,15 @@ function renderProfileAvatarMarkup() {
 		: `<span>${escapeHtml(getInitials(profileState.name))}</span>`;
 }
 
+function renderLogoutIconMarkup() {
+	const icon = window.AppIcons?.renderIcon('logout', 'profile-logout-icon');
+	if (icon) {
+		return icon;
+	}
+
+	return '<span aria-hidden="true"></span>';
+}
+
 function getProfileRecipes() {
 	return [
 		{
@@ -94,7 +103,15 @@ function renderProfilePage(root) {
 						<p class="profile-stats">Рецепты: ${profileState.recipesCount} &nbsp;&nbsp; Группы: ${profileState.groupsCount} &nbsp;&nbsp; Избранное: ${profileState.favoritesCount}</p>
 					</div>
 				</div>
-				<button type="button" class="profile-edit-btn" data-action="edit-profile">Редактировать</button>
+				<div class="profile-actions">
+					<button type="button" class="profile-edit-btn" data-action="edit-profile">Редактировать</button>
+					<div class="profile-logout-control" data-logout-control>
+						<button type="button" class="profile-logout-icon-btn" data-action="logout-toggle" aria-label="Показать кнопку выхода" aria-expanded="false">
+							${renderLogoutIconMarkup()}
+						</button>
+						<button type="button" class="profile-logout-btn" data-action="logout" hidden>Выйти</button>
+					</div>
+				</div>
 			</div>
 
 			<div class="profile-tabs search-filters__filters" role="tablist" aria-label="Разделы профиля">
@@ -124,6 +141,20 @@ function bindProfileEvents(root) {
 	root.__profileEventsBound = true;
 
 	root.addEventListener('click', (event) => {
+		if (!event.target.closest('[data-logout-control]')) {
+			setLogoutConfirmVisible(root, false);
+		}
+
+		if (event.target.closest('[data-action="logout-toggle"]')) {
+			toggleLogoutConfirm(root);
+			return;
+		}
+
+		if (event.target.closest('[data-action="logout"]')) {
+			logoutFromProfile();
+			return;
+		}
+
 		const tabButton = event.target.closest('[data-profile-tab]');
 		if (tabButton) {
 			const tabId = tabButton.getAttribute('data-profile-tab');
@@ -153,6 +184,39 @@ function bindProfileEvents(root) {
 			});
 		}
 	});
+}
+
+function setLogoutConfirmVisible(root, isVisible) {
+	const control = root.querySelector('[data-logout-control]');
+	if (!control) {
+		return;
+	}
+
+	const iconButton = control.querySelector('[data-action="logout-toggle"]');
+	const confirmButton = control.querySelector('[data-action="logout"]');
+	if (!iconButton || !confirmButton) {
+		return;
+	}
+
+	control.classList.toggle('is-open', isVisible);
+	iconButton.setAttribute('aria-expanded', String(isVisible));
+	confirmButton.hidden = !isVisible;
+}
+
+function toggleLogoutConfirm(root) {
+	const control = root.querySelector('[data-logout-control]');
+	if (!control) {
+		return;
+	}
+
+	const nextVisible = !control.classList.contains('is-open');
+	setLogoutConfirmVisible(root, nextVisible);
+}
+
+function logoutFromProfile() {
+	localStorage.removeItem('tasteory_token');
+	localStorage.removeItem('tasteory_auth_session');
+	window.location.href = '/auth.html';
 }
 
 function updateProfileHeader(root) {
