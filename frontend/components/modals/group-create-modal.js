@@ -23,6 +23,45 @@
         return document.getElementById('content-root');
     }
 
+    function bindBackdropToContentArea(backdrop) {
+        const contentArea = document.querySelector('.content-area');
+        if (!contentArea) {
+            return () => {};
+        }
+
+        const syncPosition = () => {
+            const rect = contentArea.getBoundingClientRect();
+            const left = Math.max(0, rect.left);
+            const top = Math.max(0, rect.top);
+            const right = Math.min(window.innerWidth, rect.right);
+            const bottom = Math.min(window.innerHeight, rect.bottom);
+            const width = Math.max(0, right - left);
+            const height = Math.max(0, bottom - top);
+
+            if (!width || !height) {
+                backdrop.style.left = '0';
+                backdrop.style.top = '0';
+                backdrop.style.width = '100vw';
+                backdrop.style.height = '100vh';
+                return;
+            }
+
+            backdrop.style.left = `${left}px`;
+            backdrop.style.top = `${top}px`;
+            backdrop.style.width = `${width}px`;
+            backdrop.style.height = `${height}px`;
+        };
+
+        syncPosition();
+        window.addEventListener('resize', syncPosition);
+        window.addEventListener('scroll', syncPosition, true);
+
+        return () => {
+            window.removeEventListener('resize', syncPosition);
+            window.removeEventListener('scroll', syncPosition, true);
+        };
+    }
+
     function open(options = {}) {
         const root = findContentRoot();
         if (!root || !window.ApiService) {
@@ -69,6 +108,7 @@
         `;
 
         root.appendChild(backdrop);
+        const unbindBackdropPosition = bindBackdropToContentArea(backdrop);
 
         const form = backdrop.querySelector('[data-group-form]');
         const groupNameInput = backdrop.querySelector('input[name="groupName"]');
@@ -82,6 +122,7 @@
         }
 
         function closeModal() {
+            unbindBackdropPosition();
             document.removeEventListener('keydown', onEscClose);
             backdrop.remove();
         }

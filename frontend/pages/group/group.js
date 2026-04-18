@@ -90,8 +90,47 @@ const mockGroup = {
 const groupState = {
     activeTab: 'recipes',
     searchValue: '',
-    activeFilters: new Set(['breakfast'])
+    activeFilters: new Set()
 };
+
+function bindBackdropToContentArea(backdrop) {
+    const contentArea = document.querySelector('.content-area');
+    if (!contentArea) {
+        return () => {};
+    }
+
+    const syncPosition = () => {
+        const rect = contentArea.getBoundingClientRect();
+        const left = Math.max(0, rect.left);
+        const top = Math.max(0, rect.top);
+        const right = Math.min(window.innerWidth, rect.right);
+        const bottom = Math.min(window.innerHeight, rect.bottom);
+        const width = Math.max(0, right - left);
+        const height = Math.max(0, bottom - top);
+
+        if (!width || !height) {
+            backdrop.style.left = '0';
+            backdrop.style.top = '0';
+            backdrop.style.width = '100vw';
+            backdrop.style.height = '100vh';
+            return;
+        }
+
+        backdrop.style.left = `${left}px`;
+        backdrop.style.top = `${top}px`;
+        backdrop.style.width = `${width}px`;
+        backdrop.style.height = `${height}px`;
+    };
+
+    syncPosition();
+    window.addEventListener('resize', syncPosition);
+    window.addEventListener('scroll', syncPosition, true);
+
+    return () => {
+        window.removeEventListener('resize', syncPosition);
+        window.removeEventListener('scroll', syncPosition, true);
+    };
+}
 
 export function initGroupPage(groupId) {
     const root = document.getElementById('content-root');
@@ -101,7 +140,7 @@ export function initGroupPage(groupId) {
 
     groupState.activeTab = 'recipes';
     groupState.searchValue = '';
-    groupState.activeFilters = new Set(['breakfast']);
+    groupState.activeFilters = new Set();
 
     const group = {
         ...mockGroup,
@@ -323,7 +362,7 @@ function openRemoveMemberModal(root, group) {
             <form class="group-modal__form" data-form="remove-member">
                 <label class="group-modal__label" for="member-select">Выберите участника</label>
                 <select id="member-select" class="group-modal__input group-modal__select" required>
-                    <option value="">-- Выберите участника --</option>
+                    <option value="">Выберите участника</option>
                     ${group.members.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}
                 </select>
                 <p class="group-modal__status" data-status></p>
@@ -360,7 +399,10 @@ function openRemoveMemberModal(root, group) {
 }
 
 function setupGroupModal(backdrop) {
+    const unbindBackdropPosition = bindBackdropToContentArea(backdrop);
+
     function closeModal() {
+        unbindBackdropPosition();
         document.removeEventListener('keydown', onEscClose);
         backdrop.remove();
     }
