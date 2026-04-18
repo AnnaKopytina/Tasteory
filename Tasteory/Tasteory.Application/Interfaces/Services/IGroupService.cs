@@ -19,4 +19,5 @@ public interface IGroupService
     public Task UpdateGroupAsync(Guid userId, Guid groupId, string newName);
     public Task<PagedResponse<RecipeSummaryResponse>> GetGroupRecipesPagedAsync(Guid groupId, PaginationQuery query);
     public Task AddRecipeToGroupAsync(Guid userId, Guid groupId, Guid recipeId);
+    public Task AddMemberByUsernameAsync(Guid currentUserId, Guid groupId, string userName);
 }

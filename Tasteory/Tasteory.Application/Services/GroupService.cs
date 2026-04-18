@@ -221,4 +221,36 @@ public class GroupService : IGroupService
 
         await _groupRepository.AddRecipeToGroupAsync(groupId, recipeId);
     }
+    
+    public async Task AddMemberByUsernameAsync(Guid currentUserId, Guid groupId, string userName)
+    {
+        var role = await _groupRepository.GetUserRoleInGroupAsync(currentUserId, groupId);
+        var cleanUsername = userName.TrimStart('@').Trim();
+
+        if (role != GroupRole.Owner)
+        {
+            throw new ForbiddenException("Only the group owner can add members.");
+        }
+
+        var targetUser = await _userRepository.GetByUsernameAsync(cleanUsername);
+        
+        if (targetUser is null)
+        {
+            throw new NotFoundException($"User @{cleanUsername} not found.");
+        }
+
+        if (targetUser.Id == currentUserId)
+        {
+            throw new BadRequestException("You cannot add yourself to the group.");
+        }
+        
+        var isMember = await _groupRepository.IsUserInGroupAsync(targetUser.Id, groupId);
+        
+        if (isMember)
+        {
+            throw new AlreadyExistsException("User is already a member of this group.");
+        }
+
+        await _groupRepository.AddUserToGroupAsync(targetUser.Id, groupId, GroupRole.Member);
+    }
 }

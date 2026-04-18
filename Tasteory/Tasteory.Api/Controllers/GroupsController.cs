@@ -142,4 +142,14 @@ public class GroupsController : ControllerBase
 
         return Ok(new { message = "Recipe successfully added to group", recipeId });
     }
+    
+    [HttpPost("{id:guid}/members/by-username")]
+    public async Task<IActionResult> AddMemberByUsername(Guid id, [FromBody] AddMemberByUserNameRequest request)
+    {
+        var userId = User.GetUserId();
+        
+        await _groupService.AddMemberByUsernameAsync(userId, id, request.UserName);
+    
+        return Ok(new { message = "User successfully added to group", userName = request.UserName });
+    }
 }
