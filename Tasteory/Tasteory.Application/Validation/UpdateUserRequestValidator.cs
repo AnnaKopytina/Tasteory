@@ -1,4 +1,4 @@
-﻿using Application.DTO.Responses;
+﻿using Application.DTO.Requests;
 using FluentValidation;
 
 namespace Application.Validation;
@@ -7,10 +7,12 @@ public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
 {
     public UpdateUserRequestValidator()
     {
-        RuleFor(x => x.Name)
-            .NotEmpty()
-            .WithMessage("Name cannot be empty.")
+        RuleFor(x => x.DisplayName)
             .MaximumLength(100)
-            .WithMessage("Name is too long.");
+            .When(x => x.DisplayName != null);
+        
+        RuleFor(x => x.AvatarUrl)
+            .MaximumLength(500)
+            .When(x => x.AvatarUrl != null);
     }
 }

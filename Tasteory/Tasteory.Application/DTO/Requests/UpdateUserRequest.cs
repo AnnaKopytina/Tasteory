@@ -1,3 +1,3 @@
-namespace Application.DTO.Responses;
+namespace Application.DTO.Requests;
 
-public record UpdateUserRequest(string Name);
+public record UpdateUserRequest(string? DisplayName, string? AvatarUrl);

@@ -24,13 +24,13 @@ public class UsersController : ControllerBase
     {
         var userId = User.GetUserId();
         var user = await _userService.GetUserByIdAsync(userId);
-
+        
         if (user is null)
         {
             return NotFound();
         }
 
-        return Ok(new UserResponse(user.Id, user.Email, user.UserName));
+        return Ok(new UserResponse(user.Id, user.Email, user.DisplayName, user.UserName, user.AvatarUrl));
     }
 
     [HttpPut("me")]
@@ -38,14 +38,14 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserResponse>> UpdateMe([FromBody] UpdateUserRequest request)
     {
         var userId = User.GetUserId();
-        var updatedUser = await _userService.UpdateUserAsync(userId, request.Name);
-
+        var updatedUser = await _userService.UpdateUserAsync(userId, request.DisplayName, request.AvatarUrl);
+        
         if (updatedUser is null)
         {
             return NotFound();
         }
 
-        return Ok(new UserResponse(updatedUser.Id, updatedUser.Email, updatedUser.UserName));
+        return Ok(new UserResponse(updatedUser.Id, updatedUser.Email, updatedUser.DisplayName, updatedUser.UserName, updatedUser.AvatarUrl));
     }
 
     [HttpDelete("me")]
