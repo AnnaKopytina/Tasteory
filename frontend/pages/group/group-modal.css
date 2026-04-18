@@ -35,15 +35,22 @@
 }
 
 .group-modal__close {
-	width: 32px;
-	height: 32px;
 	border: none;
-	border-radius: 50%;
-	background: #eef2f6;
+	border-radius: 0;
+	background: transparent;
 	color: #405666;
-	font-size: 24px;
+	font-size: 28px;
 	line-height: 1;
 	cursor: pointer;
+	padding: 0;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	transition: color 0.2s;
+}
+
+.group-modal__close:hover {
+	color: #173042;
 }
 
 .group-modal__form {
@@ -67,6 +74,10 @@
 	font: inherit;
 	font-size: 16px;
 	color: #233747;
+}
+
+.group-modal__input:focus {
+	outline: none;
 }
 
 .group-modal__select {

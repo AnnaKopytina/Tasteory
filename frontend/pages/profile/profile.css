@@ -33,6 +33,10 @@
     font-weight: 700;
 }
 
+.profile-avatar span {
+  line-height: 1;
+}
+
 .profile-avatar img {
 	width: 100%;
 	height: 100%;
@@ -41,6 +45,10 @@
 }
 
 .profile-avatar--image {
+	background: #e9eef2;
+}
+
+.profile-avatar--fallback {
 	background: #e9eef2;
 }
 
@@ -163,25 +171,23 @@
 }
 
 .profile-edit-modal__close {
-	width: 32px;
-	height: 32px;
 	border: none;
-	border-radius: 50%;
-	background: #eef2f6;
+	border-radius: 0;
+	background: transparent;
 	color: #405666;
-	font-size: 24px;
+	font-size: 28px;
 	cursor: pointer;
-	display: flex;
+	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	line-height: 1;
 	padding: 0;
 	flex-shrink: 0;
-	transition: background 0.2s;
+	transition: color 0.2s;
 }
 
 .profile-edit-modal__close:hover {
-	background: #e0e5ec;
+	color: #173042;
 }
 
 .profile-edit-modal__form {
@@ -209,10 +215,16 @@
 	font-weight: 600;
 	color: #173042;
 	overflow: hidden;
+	background: #e9eef2;
 }
 
 .profile-edit-modal__avatar span {
 	display: block;
+	line-height: 1;
+}
+
+.profile-edit-modal__avatar--image {
+	background: transparent;
 }
 
 .profile-edit-modal__avatar-btns {

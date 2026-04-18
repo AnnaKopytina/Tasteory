@@ -7,23 +7,44 @@ const escapeHtml = window.AppUtils?.escapeHtml || ((value) => String(value)
 	.replaceAll('"', '&quot;')
 	.replaceAll("'", '&#39;'));
 
+const getInitials = window.AppUtils?.getInitials || ((fullName) => {
+	const normalized = String(fullName || '').trim();
+	if (!normalized) {
+		return '?';
+	}
+
+	const parts = normalized.split(/\s+/).filter(Boolean);
+	const firstLetter = Array.from(parts[0] || '')[0] || '';
+	if (parts.length === 1) {
+		return firstLetter.toUpperCase();
+	}
+
+	const lastLetter = Array.from(parts[parts.length - 1] || '')[0] || '';
+	return `${firstLetter}${lastLetter}`.toUpperCase();
+});
+
 const profileState = {
 	name: 'Василькова Галина',
 	username: '@galka12345',
 	recipesCount: 2,
 	groupsCount: 0,
 	favoritesCount: 12,
-	avatarColor: '#F9C452',
 	avatarSrc: ''
 };
 
 let activeTab = 'recipes';
 
 const tabs = [
-	{ id: 'recipes', label: 'Рецепты' },
-	{ id: 'groups', label: 'Группы' },
+	{ id: 'recipes', label: 'Мои рецепты' },
+	{ id: 'groups', label: 'Мои группы' },
 	{ id: 'favorites', label: 'Избранное' }
 ];
+
+function renderProfileAvatarMarkup() {
+	return profileState.avatarSrc
+		? `<img src="${escapeHtml(profileState.avatarSrc)}" alt="">`
+		: `<span>${escapeHtml(getInitials(profileState.name))}</span>`;
+}
 
 function getProfileRecipes() {
 	return [
@@ -64,8 +85,8 @@ function renderProfilePage(root) {
 		<section class="profile-page">
 			<div class="profile-hero page-card">
 				<div class="profile-hero__left">
-					<div class="profile-avatar ${profileState.avatarSrc ? 'profile-avatar--image' : ''}" aria-hidden="true" ${profileState.avatarSrc ? '' : `style="background:${profileState.avatarColor};"`}>
-						${profileState.avatarSrc ? `<img src="${escapeHtml(profileState.avatarSrc)}" alt="">` : ''}
+					<div class="profile-avatar ${profileState.avatarSrc ? 'profile-avatar--image' : 'profile-avatar--fallback'}" aria-hidden="true">
+						${renderProfileAvatarMarkup()}
 					</div>
 					<div class="profile-meta">
 						<h1 class="profile-name">${escapeHtml(profileState.name)}</h1>
@@ -96,27 +117,65 @@ function renderProfilePage(root) {
 }
 
 function bindProfileEvents(root) {
-	root.querySelectorAll('[data-profile-tab]').forEach((button) => {
-		button.addEventListener('click', () => {
-			const tabId = button.getAttribute('data-profile-tab');
-			if (!tabId || tabId === activeTab) {
-				return;
+	if (root.__profileEventsBound) {
+		return;
+	}
+
+	root.__profileEventsBound = true;
+
+	root.addEventListener('click', (event) => {
+		const tabButton = event.target.closest('[data-profile-tab]');
+		if (tabButton) {
+			const tabId = tabButton.getAttribute('data-profile-tab');
+			if (tabId && tabId !== activeTab) {
+				activeTab = tabId;
+				root.querySelectorAll('[data-profile-tab]').forEach((button) => {
+					const isCurrent = button.getAttribute('data-profile-tab') === activeTab;
+					button.classList.toggle('is-active', isCurrent);
+					button.setAttribute('aria-selected', String(isCurrent));
+				});
+				renderActiveProfileTab(root);
 			}
+			return;
+		}
 
-			activeTab = tabId;
-			root.querySelectorAll('[data-profile-tab]').forEach((tabButton) => {
-				const isCurrent = tabButton.getAttribute('data-profile-tab') === activeTab;
-				tabButton.classList.toggle('is-active', isCurrent);
-				tabButton.setAttribute('aria-selected', String(isCurrent));
+		if (event.target.closest('[data-action="edit-profile"]')) {
+			openProfileEditModal(root);
+			return;
+		}
+
+		if (event.target.closest('[data-action="create-group"]')) {
+			window.GroupCreateModal?.open({
+				onCreated: () => {
+					profileState.groupsCount += 1;
+					updateProfileHeader(root);
+				}
 			});
-
-			renderActiveProfileTab(root);
-		});
+		}
 	});
+}
 
-	const editButton = root.querySelector('[data-action="edit-profile"]');
-	if (editButton) {
-		editButton.addEventListener('click', () => openProfileEditModal(root));
+function updateProfileHeader(root) {
+	const avatar = root.querySelector('.profile-avatar');
+	const name = root.querySelector('.profile-name');
+	const id = root.querySelector('.profile-id');
+	const stats = root.querySelector('.profile-stats');
+
+	if (avatar) {
+		avatar.className = `profile-avatar ${profileState.avatarSrc ? 'profile-avatar--image' : 'profile-avatar--fallback'}`;
+		avatar.innerHTML = renderProfileAvatarMarkup();
+	}
+
+	if (name) {
+		name.textContent = profileState.name;
+	}
+
+	if (id) {
+		id.textContent = profileState.username;
+	}
+
+	if (stats) {
+		stats.innerHTML = `Рецепты: ${profileState.recipesCount} &nbsp;&nbsp; Группы: ${profileState.groupsCount} &nbsp;&nbsp; Избранное: ${profileState.favoritesCount}`;
 	}
 }
 
@@ -133,20 +192,6 @@ function renderActiveProfileTab(root) {
 			</div>
 			<div class="profile-empty profile-empty--compact">Группы скоро появятся</div>
 		`;
-
-		const createGroupButton = content.querySelector('[data-action="create-group"]');
-		if (createGroupButton) {
-			createGroupButton.addEventListener('click', () => {
-				window.GroupCreateModal?.open({
-					onCreated: () => {
-						profileState.groupsCount += 1;
-						renderProfilePage(root);
-						bindProfileEvents(root);
-						renderActiveProfileTab(root);
-					}
-				});
-			});
-		}
 		return;
 	}
 
@@ -208,8 +253,8 @@ function openProfileEditModal(root) {
 				<p class="profile-edit-modal__status" data-status></p>
 
 				<div class="profile-edit-modal__buttons">
-					<button type="button" class="profile-edit-modal__btn-ghost" data-cancel>Отмена</button>
 					<button type="submit" class="profile-edit-modal__btn-primary">Сохранить</button>
+					<button type="button" class="profile-edit-modal__btn-ghost" data-cancel>Отмена</button>
 				</div>
 			</form>
 		</div>
@@ -237,14 +282,17 @@ function openProfileEditModal(root) {
 		if (!avatarPreview) return;
 
 		if (draftAvatarSrc) {
+			avatarPreview.classList.add('profile-edit-modal__avatar--image');
 			avatarPreview.style.backgroundImage = `url(${draftAvatarSrc})`;
 			avatarPreview.style.backgroundSize = 'cover';
 			avatarPreview.style.backgroundPosition = 'center';
 			avatarPreview.innerHTML = '';
 		} else {
+			avatarPreview.classList.remove('profile-edit-modal__avatar--image');
 			avatarPreview.style.backgroundImage = '';
-			avatarPreview.style.background = profileState.avatarColor;
-			avatarPreview.innerHTML = `<span>${escapeHtml((draftName || profileState.name).slice(0, 1))}</span>`;
+			avatarPreview.style.backgroundSize = '';
+			avatarPreview.style.backgroundPosition = '';
+			avatarPreview.innerHTML = `<span>${escapeHtml(getInitials(draftName || profileState.name))}</span>`;
 		}
 	}
 
@@ -301,9 +349,10 @@ function openProfileEditModal(root) {
 		profileState.name = nextName;
 		profileState.avatarSrc = draftAvatarSrc;
 
-		renderProfilePage(root);
-		bindProfileEvents(root);
-		renderActiveProfileTab(root);
+		updateProfileHeader(root);
+		if (activeTab !== 'groups') {
+			renderActiveProfileTab(root);
+		}
 		closeModal();
 	});
 
