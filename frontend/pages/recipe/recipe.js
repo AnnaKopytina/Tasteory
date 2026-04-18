@@ -1,7 +1,7 @@
 const recipeMockData = {
     id: "salat-123",
     title: "Полезный салат со свежими овощами",
-    author: "Васильковой Галиной",
+    author: "Василькова Галина",
     mainImage: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=2070&auto=format&fit=crop",
     time: 20,
     peopleCount: 35,
@@ -61,7 +61,6 @@ export function initRecipePage(id) {
     const root = document.getElementById('content-root');
     const data = recipeMockData;
 
-    // Загружаем сохраненные заметки из localStorage
     loadNotesFromStorage(data);
 
     root.innerHTML = `
@@ -70,7 +69,7 @@ export function initRecipePage(id) {
                 <div class="recipe-header">
                     <div class="recipe-header-left">
                         <h1 class="recipe-title">${data.title}</h1>
-                        <p class="recipe-meta-author">Сделано <span>${data.author}</span></p>
+                        <p class="recipe-meta-author">Автор <span>${data.author}</span></p>
                     </div>
 
                     <button class="favorite-btn ${data.isFavorite ? 'active' : ''}" onclick="toggleFavorite()" aria-pressed="${data.isFavorite}" title="Добавить в избранное">
@@ -104,13 +103,9 @@ export function initRecipePage(id) {
                         <div class="counter-rigth">
                             <span>Порций:</span>
                             <div class="servings-counter">
-                                <button onclick="changeServings(-1)" aria-label="Уменьшить порции">
-                                    ${renderIcon('minus', 'servings-counter__icon')}
-                                </button>
+                                <button onclick="changeServings(-1)" aria-label="Уменьшить порции">-</button>
                                 <input type="number" value="${data.currentServings}" readonly>
-                                <button onclick="changeServings(1)" aria-label="Увеличить порции">
-                                    ${renderIcon('plus', 'servings-counter__icon')}
-                                </button>
+                                <button onclick="changeServings(1)" aria-label="Увеличить порции">+</button>
                             </div>
                         </div>
                     </div>
@@ -249,27 +244,38 @@ function renderSteps(data) {
 
         return `
         <div class="step-card" id="step-${i}">
-            <h3>Шаг ${step.number}</h3>
+            <div class="step-card__header">
+                <h3>Шаг ${step.number}</h3>
+                <div class="note-action" id="note-action-${i}">
+                    ${renderAddNoteButton(step.note, i)}
+                </div>
+            </div>
             <div class="${layoutClass}">
                 ${hasMedia ? `<img src="${step.media.url}" alt="Иллюстрация шага ${step.number}" class="step-img">` : ''}
                 ${hasText ? `<p class="step-text">${step.text}</p>` : ''}
             </div>
             <div class="note-area" id="note-area-${i}">
-                ${renderNoteElement(step.note, i)}
+                ${step.note !== null ? renderNoteElement(step.note, i) : ''}
             </div>
         </div>
         `;
     }).join('');
 }
 
-function renderNoteElement(note, index) {
-    if (note === null) {
-        return `
-            <button class="add-note-btn" onclick="addNote(${index})">
-                Добавить заметку
-            </button>
-        `;
+function renderAddNoteButton(note, index) {
+    if (note !== null) {
+        return '';
     }
+
+    return `
+        <button class="add-note-btn" onclick="addNote(${index})">
+            <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
+            <span>Добавить заметку</span>
+        </button>
+    `;
+}
+
+function renderNoteElement(note, index) {
     return `
         <div class="note-wrapper">
             <!-- Кнопка удаления -->
@@ -307,7 +313,11 @@ function syncAllNoteHeights() {
 function addNote(index) {
     recipeMockData.steps[index].note = "";
     saveNoteToStorage(recipeMockData.id, index, "");
+    const action = document.getElementById(`note-action-${index}`);
     const area = document.getElementById(`note-area-${index}`);
+    if (action) {
+        action.innerHTML = '';
+    }
     area.innerHTML = renderNoteElement(recipeMockData.steps[index].note, index);
     const textarea = area.querySelector('.note-paper');
     autoResizeNote(textarea);
@@ -317,7 +327,11 @@ function addNote(index) {
 function deleteNote(index) {
     recipeMockData.steps[index].note = null;
     saveNoteToStorage(recipeMockData.id, index, null);
-    document.getElementById(`note-area-${index}`).innerHTML = renderNoteElement(null, index);
+    const action = document.getElementById(`note-action-${index}`);
+    if (action) {
+        action.innerHTML = renderAddNoteButton(null, index);
+    }
+    document.getElementById(`note-area-${index}`).innerHTML = '';
     console.log(`Заметка удалена из шага ${index + 1} `);
 }
 
