@@ -23,8 +23,7 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        await _authService.RegisterAsync(request.Name, request.Email, request.Password);
-        
+        await _authService.RegisterAsync(request.DisplayName, request.Username, request.Email, request.Password);
         return StatusCode(201);
     }
 

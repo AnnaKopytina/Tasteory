@@ -20,36 +20,38 @@ public class AuthService : IAuthService
         _jwtProvider = jwtProvider;
     }
 
-    public async Task RegisterAsync(string userName, string email, string password)
+    public async Task RegisterAsync(string username, string displayName, string email, string password)
     {
-        var existingUser = await _userRepository.GetByEmailAsync(email);
-
-        if (existingUser is not null)
+        var cleanUsername = username.TrimStart('@').Trim();
+        
+        if (await _userRepository.GetByEmailAsync(email) is not null)
         {
             throw new AlreadyExistsException("User with the same Email already exists");
         }
 
-        var passwordHash = _passwordHasher.Generate(password);
+        if (await _userRepository.UsernameExistsAsync(cleanUsername))
+        {
+            throw new AlreadyExistsException($"Username @{username} is already taken");
+        }
 
-        var user = new User(Guid.NewGuid(), userName, email, passwordHash);
+        var passwordHash = _passwordHasher.Generate(password);
+        var user = new User(Guid.NewGuid(), displayName, cleanUsername, email, passwordHash);
 
         await _userRepository.AddAsync(user);
+        
         TasteoryMetrics.UsersRegisteredTotal.Inc(); 
-
     }
 
     public async Task<string> LoginAsync(string email, string password)
     {
         var user = await _userRepository.GetByEmailAsync(email);
-
+        
         if (user is null)
         {
             throw new UnauthorizedAccessException("Invalid Email or Password");
         }
-
-        var isValidPassword = _passwordHasher.Verify(password, user.PasswordHash);
-
-        if (!isValidPassword)
+        
+        if (!_passwordHasher.Verify(password, user.PasswordHash))
         {
             throw new UnauthorizedAccessException("Invalid Email or Password");
         }
