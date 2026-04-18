@@ -53,68 +53,126 @@ const recipeMockData = {
     ]
 };
 
+function renderIcon(name, className = '') {
+    return window.AppIcons?.renderIcon(name, className) || '';
+}
+
 export function initRecipePage(id) {
     const root = document.getElementById('content-root');
     const data = recipeMockData;
 
+    // Загружаем сохраненные заметки из localStorage
+    loadNotesFromStorage(data);
+
     root.innerHTML = `
-        <div class="page-card">
-            <div class="recipe-header">
-                <div class="recipe-header-left">
-                    <h1 class="recipe-title">${data.title}</h1>
-                    <p class="recipe-meta-author">Сделано <span>${data.author}</span></p>
+        <div class="recipe-inner">
+            <div class="page-card">
+                <div class="recipe-header">
+                    <div class="recipe-header-left">
+                        <h1 class="recipe-title">${data.title}</h1>
+                        <p class="recipe-meta-author">Сделано <span>${data.author}</span></p>
+                    </div>
+
+                    <button class="favorite-btn ${data.isFavorite ? 'active' : ''}" onclick="toggleFavorite()" aria-pressed="${data.isFavorite}" title="Добавить в избранное">
+                        <span class="favorite-icon" aria-hidden="true">
+                            ${renderIcon('bookmark', 'icon-bookmark recipe-bookmark-icon')}
+                        </span>
+                    </button>
                 </div>
 
-                <button class="favorite-btn ${data.isFavorite ? 'active' : ''}" onclick="toggleFavorite()">
-                    <img src="/svg/recipe/favourites_big.svg" alt="Favorite">
-                </button>
-            </div>
-
-            <div class="recipe-image">
-                <img src="${data.mainImage}" alt="${data.title}">
-            </div>
-
-            <div class="recipe-badges">
-                <div class="recipe-badge">
-                    <img src="/svg/recipe/favourites_small.svg" alt="">
-                    <span>${data.peopleCount} человек</span>
+                <div class="recipe-image">
+                    <img src="${data.mainImage}" alt="${data.title}">
                 </div>
-                <div class="recipe-dot-divider"></div>
-                <div class="recipe-badge">
-                    <img src="/svg/sidebar/time_circle.svg" alt="">
-                    <span>${data.time} Мин</span>
-                </div>
-            </div>
-        </div>
-        <div class="page-card">
-            <div class="ingredients-block">
-                <div class="ingredients-header">
-                    <h2>Ингредиенты <span class="ing-count">${countTotalIngredients(data)}</span></h2>
-                    <div class="counter-rigth">
-                        <span>Порций:</span>
-                        <div class="servings-counter">
-                            <button onclick="changeServings(-1)">-</button>
-                            <input type="number" value="${data.currentServings}" readonly>
-                            <button onclick="changeServings(1)">+</button>
-                        </div>
+
+                <div class="recipe-badges">
+                    <div class="recipe-badge">
+                        <span class="recipe-badge__icon" aria-hidden="true">${renderIcon('favoritesSmall', 'recipe-badge__svg')}</span>
+                        <span>${data.peopleCount} человек</span>
+                    </div>
+                    <span class="recipe-dot-divider" aria-hidden="true">${renderIcon('separator', 'recipe-dot-divider__svg')}</span>
+                    <div class="recipe-badge">
+                        <span class="recipe-badge__icon" aria-hidden="true">${renderIcon('timeCircle', 'recipe-badge__svg recipe-badge__svg--time')}</span>
+                        <span>${data.time} Мин</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="ingredients-list">
-                    ${renderIngredients(data)}
+            <div class="page-card">
+                <div class="ingredients-block">
+                    <div class="ingredients-header">
+                        <h2>Ингредиенты <span class="ing-count">${countTotalIngredients(data)}</span></h2>
+                        <div class="counter-rigth">
+                            <span>Порций:</span>
+                            <div class="servings-counter">
+                                <button onclick="changeServings(-1)" aria-label="Уменьшить порции">
+                                    ${renderIcon('minus', 'servings-counter__icon')}
+                                </button>
+                                <input type="number" value="${data.currentServings}" readonly>
+                                <button onclick="changeServings(1)" aria-label="Увеличить порции">
+                                    ${renderIcon('plus', 'servings-counter__icon')}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="ingredients-list">
+                        ${renderIngredients(data)}
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="page-card">
-            <!-- STEPS -->
-            <div class="steps-block">
-                <h2 class="section-title">Как приготовить?</h2>
-                <div class="steps-list">
-                    ${renderSteps(data)}
+
+            <div class="page-card">
+                <!-- STEPS -->
+                <div class="steps-block">
+                    <h2 class="section-title">Как приготовить?</h2>
+                    <div class="steps-list">
+                        ${renderSteps(data)}
+                    </div>
                 </div>
             </div>
         </div>
     `;
+
+    syncAllNoteHeights();
+}
+
+function loadNotesFromStorage(data) {
+    const storageKey = `recipe_notes_${data.id}`;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+        try {
+            const notesData = JSON.parse(saved);
+            data.steps.forEach((step, index) => {
+                if (notesData[index] !== undefined) {
+                    step.note = notesData[index];
+                }
+            });
+        } catch (e) {
+            console.error('Ошибка при загрузке заметок:', e);
+        }
+    }
+}
+
+function saveNoteToStorage(recipeId, stepIndex, noteText) {
+    const storageKey = `recipe_notes_${recipeId}`;
+    const saved = localStorage.getItem(storageKey);
+    let notesData = {};
+
+    if (saved) {
+        try {
+            notesData = JSON.parse(saved);
+        } catch (e) {
+            console.error('Ошибка при чтении заметок:', e);
+        }
+    }
+
+    if (noteText === null || noteText === '') {
+        delete notesData[stepIndex];
+    } else {
+        notesData[stepIndex] = noteText;
+    }
+
+    localStorage.setItem(storageKey, JSON.stringify(notesData));
 }
 
 function countTotalIngredients(data) {
@@ -130,7 +188,7 @@ function renderIngredients(data) {
             <div class="ing-group-header">
                 <span>${group.name}</span>
                 <button onclick="watchIng(${i})">
-                    <img src="/svg/recipe/pointer.svg" alt="Раскрыть" class="arrow-icon ${isOpen ? 'active' : ''}">
+                        <span aria-hidden="true" class="arrow-icon ${isOpen ? 'active' : ''}">${renderIcon('pointer', 'arrow-icon__svg')}</span>
                 </button>
             </div>
             <ul class="ing-items ${isOpen ? '' : 'hidden'}">
@@ -216,36 +274,49 @@ function renderNoteElement(note, index) {
         <div class="note-wrapper">
             <!-- Кнопка удаления -->
             <button class="note-control-btn btn-delete" onclick="deleteNote(${index})" title="Удалить">
-                <img class="icon-close" width="16" height="16" src="/svg/sidebar/plus.svg" alt="Удалить" title="Удалить">
+                ${renderIcon('plus', 'icon-close note-delete-icon')}
             </button>
             
             <!-- заметка -->
             <textarea 
                 id="note-input-${index}"
                 class="note-paper"
-                oninput="showSave(${index})">${note}
+                placeholder="Напишите здесь вашу заметку..."
+                oninput="handleNoteInput(${index}, this)">${note && note !== 'Напишите здесь вашу заметку...' ? note : ''}
             </textarea>
-
-            <!-- Кнопка сохранения -->
-            <button 
-                id="save-btn-${index}" 
-                class="btn-save hidden" 
-                onclick="saveNote(${index})">Сохранить
-            </button>
         </div>
     `;
 }
 
+function autoResizeNote(textarea) {
+    if (!textarea) {
+        return;
+    }
+
+    textarea.style.height = 'auto';
+    textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+function syncAllNoteHeights() {
+    document.querySelectorAll('.note-paper').forEach((textarea) => {
+        autoResizeNote(textarea);
+    });
+}
+
 /* ИНТЕРАКТИВА С ЗАМЕТКОЙ*/
 function addNote(index) {
-    recipeMockData.steps[index].note = "Напишите здесь вашу заметку...";
+    recipeMockData.steps[index].note = "";
+    saveNoteToStorage(recipeMockData.id, index, "");
     const area = document.getElementById(`note-area-${index}`);
     area.innerHTML = renderNoteElement(recipeMockData.steps[index].note, index);
-    area.querySelector('.note-paper').focus();
+    const textarea = area.querySelector('.note-paper');
+    autoResizeNote(textarea);
+    textarea.focus();
 }
 
 function deleteNote(index) {
     recipeMockData.steps[index].note = null;
+    saveNoteToStorage(recipeMockData.id, index, null);
     document.getElementById(`note-area-${index}`).innerHTML = renderNoteElement(null, index);
     console.log(`Заметка удалена из шага ${index + 1} `);
 }
@@ -254,18 +325,11 @@ function focusNote(index, el) {
     originalNoteValue = el.innerText;
 }
 
-function showSave(index) {
-    const btn = document.getElementById(`save-btn-${index}`);
-    btn.classList.remove('hidden');
-}
-
-function saveNote(index) {
-    const textarea = document.getElementById(`note-input-${index}`);
-    const btn = document.getElementById(`save-btn-${index}`);
-
+function handleNoteInput(index, textarea) {
+    autoResizeNote(textarea);
     recipeMockData.steps[index].note = textarea.value;
-    btn.classList.add('hidden');
-    console.log("Заметка изменена ", textarea.value);
+    saveNoteToStorage(recipeMockData.id, index, textarea.value);
+    console.log("Заметка сохранена: ", textarea.value);
 }
 
 Object.assign(window, {
@@ -275,6 +339,5 @@ Object.assign(window, {
     addNote,
     deleteNote,
     focusNote,
-    showSave,
-    saveNote
+    handleNoteInput
 });

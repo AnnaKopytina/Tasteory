@@ -3,6 +3,22 @@
         baseUrl: '/api'
     };
 
+    const mockGroups = [
+        { id: '1', name: 'Семья' },
+        { id: '2', name: 'Поварёшки' }
+    ];
+
+    function appendMockGroup(group) {
+        if (!group || !group.id || !group.name) {
+            return;
+        }
+
+        const alreadyExists = mockGroups.some((item) => String(item.id) === String(group.id));
+        if (!alreadyExists) {
+            mockGroups.unshift({ id: String(group.id), name: String(group.name) });
+        }
+    }
+
     async function request(path, options = {}) {
         const response = await fetch(`${ApiService.baseUrl}${path}`, {
             headers: {
@@ -32,10 +48,10 @@
     ApiService.getMyGroups = async function () {
         try {
             const result = await request('/users/me/groups');
-            return Array.isArray(result) ? result : [];
+            return Array.isArray(result) && result.length ? result : mockGroups;
         } catch (error) {
             console.error('API Error:', error);
-            return [];
+            return mockGroups;
         }
     };
 

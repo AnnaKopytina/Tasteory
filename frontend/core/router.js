@@ -7,9 +7,24 @@
         '/main': { title: 'Главная', css: ['/pages/main/main.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'], module: '../pages/main/main.js', initKey: 'initMainPage' },
         '/recipe': { title: 'Рецепт', css: '/pages/recipe/recipe.css', module: '../pages/recipe/recipe.js', initKey: 'initRecipePage' },
         '/create': { title: 'Создать', css: '/pages/create/create.css', module: '../pages/create/create.js', initKey: 'initCreatePage' },
-        '/favorite': { title: 'Избранное', css: '/pages/favorite/favorite.css', module: '../pages/favorite/favorite.js', initKey: 'initFavoritePage' },
-        '/profile': { title: 'Профиль', module: '../pages/profile/profile.js', initKey: 'initProfilePage' },
-        '/group': { title: 'Группа', css: '/pages/group/group.css', module: '../pages/group/group.js', initKey: 'initGroupPage' }
+        '/favorite': {
+            title: 'Избранное',
+            css: ['/pages/favorite/favorite.css', '/components/recipe-card/recipe-card.css'],
+            module: '../pages/favorite/favorite.js',
+            initKey: 'initFavoritePage'
+        },
+        '/profile': {
+            title: 'Профиль',
+            css: ['/pages/profile/profile.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'],
+            module: '../pages/profile/profile.js',
+            initKey: 'initProfilePage'
+        },
+        '/group': {
+            title: 'Группа',
+            css: ['/pages/group/group.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'],
+            module: '../pages/group/group.js',
+            initKey: 'initGroupPage'
+        }
     };
 
     const state = {
@@ -221,6 +236,8 @@
         start();
     }
 })();
+
+
 
 
 

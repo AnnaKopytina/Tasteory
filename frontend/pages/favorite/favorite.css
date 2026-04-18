@@ -1,0 +1,30 @@
+.favorite-page {
+	display: grid;
+	gap: 16px;
+}
+
+.favorite-page__header {
+	padding: 20px 30px;
+}
+
+.favorite-page__title {
+	margin: 0;
+	font-size: 40px;
+	color: #102e3f;
+}
+
+.favorite-page__feed {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+	gap: 14px;
+}
+
+.favorite-page__empty {
+	min-height: 140px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: #6f7d89;
+	font-size: 22px;
+}
+
