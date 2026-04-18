@@ -60,7 +60,7 @@ public class RecipeService : IRecipeService
         }
 
         var author = await _userService.GetUserByIdAsync(recipe.AuthorId);
-        var authorName = author?.UserName ?? "Unknown Author";
+        var authorName = author?.DisplayName ?? "Unknown Author";
 
         var response = _mapper.Map<RecipeResponse>(recipe);
         response.AuthorName = authorName;
@@ -126,7 +126,7 @@ public class RecipeService : IRecipeService
         }
 
         var author = await _userRepository.GetByIdAsync(userId);
-        var authorName = author?.UserName ?? "Unknown author";
+        var authorName = author?.DisplayName ?? "Unknown author";
 
         var responses = summaries.Select(s => new RecipeSummaryResponse(
             s.Id,
