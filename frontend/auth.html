@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Вход</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Titan+One&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/auth/auth.css">
+</head>
+<body>
+
+<div class="auth-page">
+    <div class="auth-illustration">
+      <img src="svg/auth/installation.svg" alt="Some food">
+    </div>
+
+    <div class="auth-form-section">
+      <div class="auth-header">
+        <div class="logo">Tasteory</div>
+      </div>
+
+      <h1 class="auth-title" id="auth-title">Вход</h1>
+
+      <form id="auth-form">
+        <div class="input-group" id="name-group" style="display: none;">
+          <label for="auth-name">Имя пользователя</label>
+          <input type="text" id="auth-name" placeholder="Введите имя и фамилию">
+        </div>
+
+        <div class="input-group" id="profile-id-group" style="display: none;">
+          <label for="auth-profile-id">Уникальный ID профиля</label>
+          <input type="text" id="auth-profile-id" placeholder="Например, user_123">
+        </div>
+
+        <div class="input-group">
+          <label for="auth-email">Почта</label>
+          <input type="email" id="auth-email" placeholder="Введите почту" required>
+        </div>
+
+        <div class="input-group">
+          <label for="auth-password">Пароль</label>
+          <div class="password-wrapper">
+            <input type="password" id="auth-password" placeholder="Введите пароль" required>
+            <button type="button" class="toggle-password" id="toggle-password">
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="auth-submit-btn" id="auth-submit-btn">Войти</button>
+      </form>
+
+      <div class="auth-footer">
+        <span id="auth-toggle-text">Ещё нет аккаунта?</span>
+        <a href="#" id="auth-toggle-link">Зарегистрироваться</a>
+      </div>
+    </div>
+</div>
+
+<script src="/auth/auth.js"></script>
+</body>
+</html>

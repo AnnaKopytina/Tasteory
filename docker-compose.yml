@@ -51,6 +51,9 @@ services:
       - "${FRONTEND_PORT}:80"
     depends_on:
       - backend
+    volumes:
+    - ./frontend:/usr/share/nginx/html
+    - ./frontend/nginx.conf:/etc/nginx/conf.d/default.conf
     restart: always
 
   loki:
