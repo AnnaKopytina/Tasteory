@@ -34,6 +34,7 @@ public class UserService : IUserService
 
         if (newAvatarUrl is not null)
         {
+            newAvatarUrl = string.IsNullOrWhiteSpace(newAvatarUrl) ? null : newAvatarUrl;
             user.UpdateAvatar(newAvatarUrl);
         }
 

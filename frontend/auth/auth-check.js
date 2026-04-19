@@ -1,13 +1,19 @@
-if (!localStorage.getItem('tasteory_token')) {
-    window.location.href = '/auth.html';
-}
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const response = await fetch('/api/users/me', { credentials: 'include' });
+        if (!response.ok) {
+            window.location.href = '/auth.html';
+            return;
+        }
+    } catch (error) {
+        window.location.href = '/auth.html';
+    }
 
-document.addEventListener('DOMContentLoaded', () => {
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', (e) => {
+        logoutBtn.addEventListener('click', async (e) => {
             e.preventDefault();
-            localStorage.removeItem('tasteory_token');
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
             window.location.href = '/auth.html';
         });
     }
