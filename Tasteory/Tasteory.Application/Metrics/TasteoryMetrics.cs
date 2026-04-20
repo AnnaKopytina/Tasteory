@@ -11,6 +11,9 @@ public static class TasteoryMetrics
     public static readonly Counter UsersRegisteredTotal = Prometheus.Metrics
         .CreateCounter("tasteory_users_registered_total", "Всего зарегистрированных пользователей");
 
+    public static readonly Counter GroupsCreatedTotal = Prometheus.Metrics
+        .CreateCounter("tasteory_groups_created_total", "Всего созданных групп");
+    
     public static readonly Counter GroupInvitationsTotal = Prometheus.Metrics
         .CreateCounter("tasteory_group_invitations_total", "Количество принятых приглашений в группы");
     

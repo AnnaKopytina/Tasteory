@@ -3,6 +3,7 @@ using Application.DTO.Responses;
 using Application.Exceptions;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
+using Application.Metrics;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Enums;
@@ -46,8 +47,12 @@ public class RecipeService : IRecipeService
 
             recipe.AddStep(step.Content, step.SortOrder, step.MediaUrl, mediaType);
         }
+        var id = await _recipeRepository.CreateRecipeAsync(recipe);
 
-        return await _recipeRepository.CreateRecipeAsync(recipe);
+        var visibility = request.IsPrivate ? "private" : "public";
+        TasteoryMetrics.RecipesCreatedTotal.WithLabels(visibility).Inc();
+
+        return id;
     }
 
     public async Task<RecipeResponse?> GetRecipeByIdAsync(Guid recipeId)

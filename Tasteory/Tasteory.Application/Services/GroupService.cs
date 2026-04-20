@@ -3,6 +3,7 @@ using Application.DTO.Responses;
 using Application.Exceptions;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
+using Application.Metrics;
 using Domain.Entities;
 using Domain.Enums;
 using Domain.Models;
@@ -25,7 +26,9 @@ public class GroupService : IGroupService
 
     public async Task<Guid> CreateGroupAsync(Guid userId, string name)
     {
-        return await _groupRepository.CreateGroupAsync(userId, name);
+        var id = await _groupRepository.CreateGroupAsync(userId, name);
+        TasteoryMetrics.GroupsCreatedTotal.Inc();
+        return id;
     }
 
     public async Task<string> GenerateInviteCodeAsync(Guid userId, Guid groupId)
@@ -79,7 +82,7 @@ public class GroupService : IGroupService
         }
 
         await _groupRepository.AddUserToGroupAsync(userId, invite.GroupId, GroupRole.Member);
-
+        TasteoryMetrics.GroupInvitationsTotal.Inc();
         return invite.GroupId;
     }
 
