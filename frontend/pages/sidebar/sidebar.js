@@ -1,6 +1,7 @@
+import {DataStore} from '../../services/data-store.js';
+
 (() => {
     const renderIcon = window.AppIcons?.render;
-    const dataStore = window.TasteoryDataStore || {};
 
     function createIcon(iconName, className = '') {
         if (!renderIcon) {
@@ -84,7 +85,7 @@
         groupsList.innerHTML = '<div class="sub-item">Загрузка групп...</div>';
 
         try {
-            const groupsData = await Promise.resolve(dataStore.getMyGroups?.() || window.ApiService?.getMyGroups?.() || []);
+            const groupsData = await Promise.resolve(DataStore.getMyGroups());
             groupsList.innerHTML = '';
 
             if (!groupsData.length) {

@@ -210,7 +210,6 @@ function toggleFavorite() {
 }
 
 /* ШАГИ */
-let originalNoteValue = "";
 
 function renderSteps(data) {
     return data.steps.map((step, i) => {
@@ -326,10 +325,6 @@ function deleteNote(index) {
     console.log(`Заметка удалена из шага ${index + 1} `);
 }
 
-function focusNote(index, el) {
-    originalNoteValue = el.innerText;
-}
-
 function handleNoteInput(index, textarea) {
     const data = getCurrentRecipe();
     if (!data) {
@@ -348,6 +343,5 @@ Object.assign(window, {
     toggleFavorite,
     addNote,
     deleteNote,
-    focusNote,
     handleNoteInput
 });

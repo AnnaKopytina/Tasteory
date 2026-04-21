@@ -47,7 +47,7 @@ function getMyGroups() {
 }
 
 function getProfileStats() {
-    return getMockStore().getProfileStats?.() || { recipesCount: 0, groupsCount: 0, favoritesCount: 0 };
+    return getMockStore().getProfileStats?.() || {recipesCount: 0, groupsCount: 0, favoritesCount: 0};
 }
 
 function getGroupById(groupId) {

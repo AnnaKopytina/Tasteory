@@ -1,3 +1,5 @@
+import {DataStore} from '../../services/data-store.js';
+
 (() => {
     const escapeHtml = window.AppUtils?.escapeHtml || ((value) => String(value)
         .replaceAll('&', '&amp;')
@@ -51,7 +53,7 @@
 
     function open(options = {}) {
         const root = findContentRoot();
-        if (!root || (!window.TasteoryDataStore && !window.ApiService)) {
+        if (!root) {
             return null;
         }
 
@@ -159,10 +161,7 @@
             showStatus('Создаем группу...');
 
             try {
-                const createdGroup = await Promise.resolve(
-                    window.TasteoryDataStore?.createGroup?.(groupName, [])
-                    || window.ApiService?.addGroup?.(groupName, [])
-                );
+                const createdGroup = await Promise.resolve(DataStore.createGroup(groupName, []));
                 window.dispatchEvent(new CustomEvent('groups:changed', { detail: createdGroup }));
                 if (typeof options.onCreated === 'function') {
                     options.onCreated(createdGroup);
