@@ -1,6 +1,6 @@
-import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
-import { SearchFilters } from '../../components/search-filters/search-filters.js';
 import {DataStore} from '../../services/data-store.js';
+import { createRecipeFiltersState as createGroupRecipeFiltersState } from '../../core/recipe-filters.js';
+import { renderGroupRecipesControls, renderGroupRecipesList } from './group-recipes-ui.js';
 
 const escapeHtml = window.AppUtils?.escapeHtml || ((value) => String(value)
     .replaceAll('&', '&amp;')
@@ -9,16 +9,9 @@ const escapeHtml = window.AppUtils?.escapeHtml || ((value) => String(value)
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;'));
 
-const RECIPE_FILTERS = [
-    { id: 'breakfast', label: 'Завтрак' },
-    { id: 'lunch', label: 'Обед' },
-    { id: 'dinner', label: 'Ужин' }
-];
-
 const groupState = {
     activeTab: 'recipes',
-    searchValue: '',
-    activeFilters: new Set()
+    recipeFilters: createGroupRecipeFiltersState()
 };
 
 function bindBackdropToContentArea(backdrop) {
@@ -79,8 +72,7 @@ export function initGroupPage(groupId) {
     }
 
     groupState.activeTab = 'recipes';
-    groupState.searchValue = '';
-    groupState.activeFilters = new Set();
+    groupState.recipeFilters = createGroupRecipeFiltersState();
 
     const group = getGroupById(groupId);
     if (!group) {
@@ -345,10 +337,7 @@ function openAddMemberModal(root, group) {
 
         group.memberIds = Array.from(new Set([...(group.memberIds || []), userId]));
 
-        if (groupState.activeTab === 'members') {
-            renderMembersTab(root.querySelector('[data-group-content]'), group);
-        }
-
+        renderActiveTab(root, group);
         window.dispatchEvent(new CustomEvent('groups:changed', { detail: { updatedGroupId: group.id } }));
 
         backdrop.remove();
@@ -401,10 +390,7 @@ function openRemoveMemberModal(root, group) {
             group.memberIds.splice(index, 1);
         }
 
-        if (groupState.activeTab === 'members') {
-            renderMembersTab(root.querySelector('[data-group-content]'), group);
-        }
-
+        renderActiveTab(root, group);
         window.dispatchEvent(new CustomEvent('groups:changed', { detail: { updatedGroupId: group.id } }));
 
         backdrop.remove();
@@ -453,10 +439,7 @@ function openRemoveRecipeModal(root, group) {
         }
 
         removeRecipeById(group, recipeId);
-        if (groupState.activeTab === 'recipes') {
-            renderRecipesTab(root.querySelector('[data-group-content]'), group);
-        }
-
+        renderActiveTab(root, group);
         window.dispatchEvent(new CustomEvent('groups:changed', { detail: { updatedGroupId: group.id } }));
 
         backdrop.remove();
@@ -572,49 +555,16 @@ function renderRecipesTab(content, group) {
         return;
     }
 
-    SearchFilters.renderSearchFilters(controls, {
-        placeholder: 'Искать',
-        searchAriaLabel: 'Поиск рецептов группы',
-        filters: RECIPE_FILTERS,
-        searchValue: groupState.searchValue,
-        activeFilters: Array.from(groupState.activeFilters),
-        onSearch: (value) => {
-            groupState.searchValue = value;
-            renderRecipesList(recipesContainer, group);
-        },
-        onFilterToggle: (_, __, activeFilters) => {
-            groupState.activeFilters = new Set(activeFilters);
-            renderRecipesList(recipesContainer, group);
-        }
-    });
+    const onListChange = () => {
+        renderGroupRecipesList(recipesContainer, getGroupRecipes(group), groupState.recipeFilters, {
+            onFavoriteClick: (recipe) => {
+                DataStore.setRecipeFavorite(recipe.id, recipe.isFavorite);
+            }
+        });
+    };
 
-    renderRecipesList(recipesContainer, group);
-}
-
-function renderRecipesList(container, group) {
-    const search = groupState.searchValue.trim().toLowerCase();
-    const recipesSource = getGroupRecipes(group);
-
-    const recipes = recipesSource.filter((recipe) => {
-        const matchesSearch = !search
-            || recipe.title.toLowerCase().includes(search)
-            || recipe.author.toLowerCase().includes(search);
-
-        const matchesFilters = groupState.activeFilters.size === 0 || groupState.activeFilters.has(recipe.type);
-
-        return matchesSearch && matchesFilters;
-    });
-
-    if (!recipes.length) {
-        container.innerHTML = '<p class="group-page__empty">Ничего не найдено. Попробуйте изменить поиск или фильтр.</p>';
-        return;
-    }
-
-    RecipeCard.renderRecipeCards(recipes, container, {
-        onFavoriteClick: (recipe) => {
-            DataStore.setRecipeFavorite(recipe.id, recipe.isFavorite);
-        }
-    });
+    renderGroupRecipesControls(controls, groupState.recipeFilters, onListChange);
+    onListChange();
 }
 
 function renderMembersTab(content, group) {
