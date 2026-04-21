@@ -3,20 +3,38 @@
         baseUrl: '/api'
     };
 
-    const mockGroups = [
-        { id: '1', name: 'Семья' },
-        { id: '2', name: 'Поварёшки' }
-    ];
+    function getDataStore() {
+        return window.TasteoryDataStore || null;
+    }
 
-    function appendMockGroup(group) {
-        if (!group || !group.id || !group.name) {
+    function getFallbackGroups() {
+        const dataStore = getDataStore();
+        if (typeof dataStore?.getMyGroups === 'function') {
+            return dataStore.getMyGroups();
+        }
+
+        return [];
+    }
+
+    function upsertMockGroup(group) {
+        if (!group || !group.name) {
             return;
         }
 
-        const alreadyExists = mockGroups.some((item) => String(item.id) === String(group.id));
-        if (!alreadyExists) {
-            mockGroups.unshift({ id: String(group.id), name: String(group.name) });
+        const dataStore = getDataStore();
+        const storeGroup = typeof dataStore?.createGroup === 'function'
+            ? dataStore.createGroup(group.name, group.memberIds || [])
+            : null;
+
+        if (storeGroup && group.id) {
+            storeGroup.id = String(group.id);
         }
+
+        if (storeGroup && group.name) {
+            storeGroup.name = String(group.name);
+        }
+
+        return storeGroup || group;
     }
 
     async function request(path, options = {}) {
@@ -48,18 +66,36 @@
     ApiService.getMyGroups = async function () {
         try {
             const result = await request('/users/me/groups');
-            return Array.isArray(result) && result.length ? result : mockGroups;
+            return Array.isArray(result) && result.length ? result : getFallbackGroups();
         } catch (error) {
             console.error('API Error:', error);
-            return mockGroups;
+            return getFallbackGroups();
         }
     };
 
-    ApiService.addGroup = async function (groupName) {
-        return request('/groups', {
-            method: 'POST',
-            body: JSON.stringify({ name: groupName })
-        });
+    ApiService.addGroup = async function (groupName, memberIds = []) {
+        try {
+            const createdGroup = await request('/groups', {
+                method: 'POST',
+                body: JSON.stringify({ name: groupName, memberIds })
+            });
+
+            return upsertMockGroup(createdGroup || { name: groupName, memberIds });
+        } catch (error) {
+            return upsertMockGroup({ name: groupName, memberIds }) || {
+                id: `group-${Date.now()}`,
+                name: String(groupName || 'Новая группа')
+            };
+        }
+    };
+
+    ApiService.removeMockGroup = function (groupId) {
+        const dataStore = getDataStore();
+        if (typeof dataStore?.removeGroupById === 'function') {
+            return dataStore.removeGroupById(groupId);
+        }
+
+        return false;
     };
 
     window.ApiService = ApiService;

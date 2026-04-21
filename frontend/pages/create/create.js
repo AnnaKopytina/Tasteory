@@ -2,7 +2,9 @@ const MIN_SERVINGS = 1;
 const MAX_SERVINGS = 99;
 
 function renderDeleteIcon() {
-    return window.AppIcons?.renderIcon('delete', 'icon-btn__icon') || '';
+    return window.AppIcons?.render?.('delete', 'icon-btn__icon')
+        || window.AppIcons?.renderIcon?.('delete', 'icon-btn__icon')
+        || '';
 }
 
 let sectionCounter = 0;

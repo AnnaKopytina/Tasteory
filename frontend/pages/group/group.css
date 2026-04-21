@@ -11,6 +11,14 @@
 	position: relative;
 }
 
+.group-page__header-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+
 .group-page__title {
 	margin: 0;
 	color: #173042;
@@ -40,6 +48,24 @@
 .group-page__menu-btn svg {
 	width: 24px;
 	height: 24px;
+}
+
+.group-page__action-btn {
+	min-height: 44px;
+	padding: 10px 16px;
+	border: 1px solid #d8dde4;
+	border-radius: 12px;
+	background: #fff;
+	color: #2d4354;
+	font: inherit;
+	font-size: 14px;
+	cursor: pointer;
+	transition: background-color 0.2s, border-color 0.2s;
+}
+
+.group-page__action-btn:hover {
+	background: #f5f8fb;
+	border-color: #c9d2db;
 }
 
 .group-page__menu {

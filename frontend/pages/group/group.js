@@ -1,5 +1,6 @@
 import { RecipeCard } from '../../components/recipe-card/RecipeCard.js';
 import { SearchFilters } from '../../components/search-filters/SearchFilters.js';
+import {DataStore} from '../../services/data-store.js';
 
 const escapeHtml = window.AppUtils?.escapeHtml || ((value) => String(value)
     .replaceAll('&', '&amp;')
@@ -13,79 +14,6 @@ const RECIPE_FILTERS = [
     { id: 'lunch', label: 'Обед' },
     { id: 'dinner', label: 'Ужин' }
 ];
-
-const mockGroup = {
-    id: '1',
-    name: 'Семья',
-    members: [
-        { id: 'u1', name: 'Василькова Галина', role: 'Админ' },
-        { id: 'u2', name: 'Петров Иван', role: 'Участник' },
-        { id: 'u3', name: 'Сидорова Мария', role: 'Участник' },
-        { id: 'u4', name: 'Кузнецова Ольга', role: 'Участник' }
-    ],
-    recipes: [
-        {
-            id: 'g1',
-            type: 'breakfast',
-            title: 'Полезный салат со свежими овощами',
-            image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=500&auto=format&fit=crop',
-            author: 'Василькова Галина',
-            time: 20,
-            servings: 35,
-            isFavorite: false
-        },
-        {
-            id: 'g2',
-            type: 'lunch',
-            title: 'Паста с томатным соусом',
-            image: 'https://img.povar.ru/main-micro/00/00/6c/83/spagetti_chetire_pomidora-825929.jpg',
-            author: 'Петров Иван',
-            time: 25,
-            servings: 12,
-            isFavorite: false
-        },
-        {
-            id: 'g3',
-            type: 'dinner',
-            title: 'Запеченная курица с картофелем',
-            image: 'https://images.unsplash.com/photo-1598103442097-8b74394b95c6?q=80&w=500&auto=format&fit=crop',
-            author: 'Сидорова Мария',
-            time: 50,
-            servings: 6,
-            isFavorite: true
-        },
-        {
-            id: 'g4',
-            type: 'breakfast',
-            title: 'Овсянка с ягодами и орехами',
-            image: 'https://images.unsplash.com/photo-1517093911940-08cb5b3952e7?q=80&w=500&auto=format&fit=crop',
-            author: 'Кузнецова Ольга',
-            time: 10,
-            servings: 4,
-            isFavorite: false
-        },
-        {
-            id: 'g5',
-            type: 'lunch',
-            title: 'Крем-суп из тыквы',
-            image: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?q=80&w=500&auto=format&fit=crop',
-            author: 'Василькова Галина',
-            time: 35,
-            servings: 5,
-            isFavorite: false
-        },
-        {
-            id: 'g6',
-            type: 'dinner',
-            title: 'Лосось с овощами',
-            image: 'https://images.unsplash.com/photo-1467003909585-2f8a72700288?q=80&w=500&auto=format&fit=crop',
-            author: 'Петров Иван',
-            time: 30,
-            servings: 3,
-            isFavorite: false
-        }
-    ]
-};
 
 const groupState = {
     activeTab: 'recipes',
@@ -132,6 +60,18 @@ function bindBackdropToContentArea(backdrop) {
     };
 }
 
+function getGroupById(groupId) {
+    return DataStore.getGroupById(groupId);
+}
+
+function getGroupMembers(group) {
+    return DataStore.getGroupMembers(group);
+}
+
+function getGroupRecipes(group) {
+    return DataStore.getGroupRecipes(group);
+}
+
 export function initGroupPage(groupId) {
     const root = document.getElementById('content-root');
     if (!root) {
@@ -142,18 +82,21 @@ export function initGroupPage(groupId) {
     groupState.searchValue = '';
     groupState.activeFilters = new Set();
 
-    const group = {
-        ...mockGroup,
-        id: groupId || mockGroup.id
-    };
+    const group = getGroupById(groupId);
+    if (!group) {
+        root.innerHTML = '<section class="group-page"><div class="group-page__empty">Группа не найдена</div></section>';
+        return;
+    }
 
     root.innerHTML = `
         <section class="group-page">
             <div class="group-page__header">
-            <h1 class="group-page__title">${group.name}</h1>
-                <button class="group-page__menu-btn" data-action="open-group-menu" aria-label="Меню группы" title="Параметры">
-                    ${window.AppIcons?.renderIcon('dots', 'group-page__menu-btn-icon') || ''}
-                </button>
+                <h1 class="group-page__title">${group.name}</h1>
+                <div class="group-page__header-actions">
+                    <button class="group-page__menu-btn" data-action="open-group-menu" aria-label="Меню группы" title="Параметры">
+                        ${window.AppIcons?.render?.('dots', 'group-page__menu-btn-icon') || ''}
+                    </button>
+                </div>
             </div>
 
             <div class="group-page__tabs" role="tablist" aria-label="Раздел группы">
@@ -187,15 +130,43 @@ export function initGroupPage(groupId) {
 }
 
 function bindMenuEvents(root, group) {
+    if (root.__groupMenuEventsBound) {
+        return;
+    }
+
+    root.__groupMenuEventsBound = true;
+
     const menuBtn = root.querySelector('[data-action="open-group-menu"]');
     if (!menuBtn) {
         return;
     }
 
-    menuBtn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        openGroupMenu(root, group);
+    root.addEventListener('click', (event) => {
+        const action = event.target.closest('[data-action]');
+        if (!action) {
+            return;
+        }
+
+        const actionType = action.getAttribute('data-action');
+        if (actionType === 'open-group-menu') {
+            event.preventDefault();
+            event.stopPropagation();
+            openGroupMenu(root, group);
+            return;
+        }
+
+        if (actionType === 'leave-group') {
+            event.preventDefault();
+            event.stopPropagation();
+            openLeaveGroupModal(root, group);
+            return;
+        }
+
+        if (actionType === 'remove-recipe') {
+            event.preventDefault();
+            event.stopPropagation();
+            openRemoveRecipeModal(root, group);
+        }
     });
 
     document.addEventListener('click', (event) => {
@@ -220,6 +191,8 @@ function openGroupMenu(root, group) {
         <button class="group-page__menu-item" data-action="add-member">Добавить участника</button>
         <button class="group-page__menu-item" data-action="remove-member">Удалить участника</button>
         <button class="group-page__menu-item" data-action="add-recipe">Добавить рецепт</button>
+        <button class="group-page__menu-item" data-action="remove-recipe">Удалить рецепт</button>
+        <button class="group-page__menu-item" data-action="leave-group">Покинуть группу</button>
     `;
 
     const header = root.querySelector('.group-page__header');
@@ -249,10 +222,48 @@ function openGroupMenu(root, group) {
             case 'remove-member':
                 openRemoveMemberModal(root, group);
                 break;
+            case 'remove-recipe':
+                openRemoveRecipeModal(root, group);
+                break;
             case 'add-recipe':
                 window.location.href = '/create';
                 break;
+            case 'leave-group':
+                openLeaveGroupModal(root, group);
+                break;
         }
+    });
+}
+
+function openLeaveGroupModal(root, group) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'group-modal-backdrop';
+    backdrop.innerHTML = `
+        <div class="group-modal" role="dialog" aria-label="Покинуть группу">
+            <div class="group-modal__header">
+                <h2 class="group-modal__title">Покинуть группу</h2>
+                <button type="button" class="group-modal__close" aria-label="Закрыть">×</button>
+            </div>
+            <form class="group-modal__form" data-form="leave-group">
+                <p>Вы уверены, что хотите покинуть группу «${escapeHtml(group.name)}»?</p>
+                <p class="group-modal__status" data-status></p>
+                <div class="group-modal__actions">
+                    <button type="button" class="group-modal__btn group-modal__btn--ghost">Отмена</button>
+                    <button type="submit" class="group-modal__btn">Покинуть</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    root.appendChild(backdrop);
+    setupGroupModal(backdrop);
+
+    backdrop.querySelector('[data-form="leave-group"]').addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        DataStore.removeGroupById(group.id);
+        window.dispatchEvent(new CustomEvent('groups:changed', { detail: { removedGroupId: group.id } }));
+        window.location.href = '/main';
     });
 }
 
@@ -289,6 +300,7 @@ function openEditGroupNameModal(root, group) {
         }
         group.name = newName;
         root.querySelector('.group-page__title').textContent = newName;
+        window.dispatchEvent(new CustomEvent('groups:changed', { detail: { updatedGroupId: group.id } }));
         backdrop.remove();
     });
 }
@@ -325,28 +337,27 @@ function openAddMemberModal(root, group) {
             return;
         }
 
-        const alreadyExists = group.members.some((m) => String(m.id) === String(userId));
+        const alreadyExists = (group.memberIds || []).some((memberId) => String(memberId) === String(userId));
         if (alreadyExists) {
             showStatus(backdrop, 'Этот участник уже в группе', true);
             return;
         }
 
-        group.members.push({
-            id: userId,
-            name: `Пользователь ${userId}`,
-            role: 'Участник'
-        });
+        group.memberIds = Array.from(new Set([...(group.memberIds || []), userId]));
 
         if (groupState.activeTab === 'members') {
             renderMembersTab(root.querySelector('[data-group-content]'), group);
         }
+
+        window.dispatchEvent(new CustomEvent('groups:changed', { detail: { updatedGroupId: group.id } }));
 
         backdrop.remove();
     });
 }
 
 function openRemoveMemberModal(root, group) {
-    if (group.members.length === 0) {
+    const members = getGroupMembers(group);
+    if (members.length === 0) {
         alert('В группе нет участников для удаления');
         return;
     }
@@ -363,7 +374,7 @@ function openRemoveMemberModal(root, group) {
                 <label class="group-modal__label" for="member-select">Выберите участника</label>
                 <select id="member-select" class="group-modal__input group-modal__select" required>
                     <option value="">Выберите участника</option>
-                    ${group.members.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}
+                    ${members.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name)}</option>`).join('')}
                 </select>
                 <p class="group-modal__status" data-status></p>
                 <div class="group-modal__actions">
@@ -385,17 +396,81 @@ function openRemoveMemberModal(root, group) {
             return;
         }
 
-        const index = group.members.findIndex((m) => String(m.id) === String(memberId));
+        const index = (group.memberIds || []).findIndex((m) => String(m) === String(memberId));
         if (index !== -1) {
-            group.members.splice(index, 1);
+            group.memberIds.splice(index, 1);
         }
 
         if (groupState.activeTab === 'members') {
             renderMembersTab(root.querySelector('[data-group-content]'), group);
         }
 
+        window.dispatchEvent(new CustomEvent('groups:changed', { detail: { updatedGroupId: group.id } }));
+
         backdrop.remove();
     });
+}
+
+function openRemoveRecipeModal(root, group) {
+    const recipes = getGroupRecipes(group);
+    if (recipes.length === 0) {
+        alert('В группе нет рецептов для удаления');
+        return;
+    }
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'group-modal-backdrop';
+    backdrop.innerHTML = `
+        <div class="group-modal" role="dialog" aria-label="Удалить рецепт">
+            <div class="group-modal__header">
+                <h2 class="group-modal__title">Удалить рецепт</h2>
+                <button type="button" class="group-modal__close" aria-label="Закрыть">×</button>
+            </div>
+            <form class="group-modal__form" data-form="remove-recipe">
+                <label class="group-modal__label" for="recipe-select">Выберите рецепт</label>
+                <select id="recipe-select" class="group-modal__input group-modal__select" required>
+                    <option value="">Выберите рецепт</option>
+                    ${recipes.map((recipe) => `<option value="${escapeHtml(recipe.id)}">${escapeHtml(recipe.title)}</option>`).join('')}
+                </select>
+                <p class="group-modal__status" data-status></p>
+                <div class="group-modal__actions">
+                    <button type="button" class="group-modal__btn group-modal__btn--ghost">Отмена</button>
+                    <button type="submit" class="group-modal__btn">Удалить</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+    root.appendChild(backdrop);
+    setupGroupModal(backdrop);
+
+    backdrop.querySelector('[data-form="remove-recipe"]').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const recipeId = backdrop.querySelector('select').value;
+        if (!recipeId) {
+            showStatus(backdrop, 'Выберите рецепт', true);
+            return;
+        }
+
+        removeRecipeById(group, recipeId);
+        if (groupState.activeTab === 'recipes') {
+            renderRecipesTab(root.querySelector('[data-group-content]'), group);
+        }
+
+        window.dispatchEvent(new CustomEvent('groups:changed', { detail: { updatedGroupId: group.id } }));
+
+        backdrop.remove();
+    });
+}
+
+function removeRecipeById(group, recipeId) {
+    const recipeIndex = (group.recipeIds || []).findIndex((id) => String(id) === String(recipeId));
+    if (recipeIndex === -1) {
+        return false;
+    }
+
+    group.recipeIds.splice(recipeIndex, 1);
+    return true;
 }
 
 function setupGroupModal(backdrop) {
@@ -444,6 +519,12 @@ function showStatus(backdrop, message, isError = false) {
 
 
 function bindTabEvents(root, group) {
+    if (root.__groupTabEventsBound) {
+        return;
+    }
+
+    root.__groupTabEventsBound = true;
+
     root.querySelectorAll('[data-group-tab]').forEach((button) => {
         button.addEventListener('click', () => {
             const tabId = button.getAttribute('data-group-tab');
@@ -512,8 +593,9 @@ function renderRecipesTab(content, group) {
 
 function renderRecipesList(container, group) {
     const search = groupState.searchValue.trim().toLowerCase();
+    const recipesSource = getGroupRecipes(group);
 
-    const recipes = group.recipes.filter((recipe) => {
+    const recipes = recipesSource.filter((recipe) => {
         const matchesSearch = !search
             || recipe.title.toLowerCase().includes(search)
             || recipe.author.toLowerCase().includes(search);
@@ -529,26 +611,27 @@ function renderRecipesList(container, group) {
     }
 
     RecipeCard.renderRecipeCards(recipes, container, {
-        onFavoriteClick: () => {
-            // Карточка сама меняет локальное состояние избранного, повторный рендер не нужен.
+        onFavoriteClick: (recipe) => {
+            DataStore.setRecipeFavorite(recipe.id, recipe.isFavorite);
         }
     });
 }
 
 function renderMembersTab(content, group) {
-    if (!group.members.length) {
+	const members = getGroupMembers(group);
+	if (!members.length) {
         content.innerHTML = '<p class="group-page__empty">В этой группе пока нет участников.</p>';
         return;
     }
 
     content.innerHTML = `
         <ul class="group-page__members" aria-label="Участники группы">
-            ${group.members.map((member) => `
+			${members.map((member) => `
                 <li class="group-page__member">
                     <span class="group-page__member-avatar" aria-hidden="true">${member.name.slice(0, 1)}</span>
                     <div class="group-page__member-meta">
                         <p class="group-page__member-name">${member.name}</p>
-                        <p class="group-page__member-role">${member.role}</p>
+                        <p class="group-page__member-role">${member.role} · Рецептов: ${member.recipeCount}</p>
                     </div>
                 </li>
             `).join('')}

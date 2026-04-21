@@ -1,35 +1,6 @@
 import {RecipeCard} from '../../components/recipe-card/RecipeCard.js';
 import {SearchFilters} from '../../components/search-filters/SearchFilters.js';
-
-const mockRecipes = [
-    {
-        id: '1',
-        title: 'Полезный салат со свежими овощами',
-        image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=500&auto=format&fit=crop',
-        author: 'Василькова Галина',
-        time: 20,
-        servings: 2,
-        isFavorite: false
-    },
-    {
-        id: '2',
-        title: 'Паста с томатным соусом',
-        image: 'https://img.povar.ru/main-micro/00/00/6c/83/spagetti_chetire_pomidora-825929.jpg',
-        author: 'Петров Иван',
-        time: 25,
-        servings: 4,
-        isFavorite: false
-    },
-    {
-        id: '3',
-        title: 'Шоколадное печенье',
-        image: 'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=500&auto=format&fit=crop',
-        author: 'Сидорова Мария',
-        time: 30,
-        servings: 12,
-        isFavorite: false
-    }
-];
+import {DataStore} from '../../services/data-store.js';
 
 export function initMainPage() {
     const root = document.getElementById('content-root');
@@ -46,8 +17,9 @@ export function initMainPage() {
     SearchFilters.renderSearchFilters(controlsContainer);
 
     const feedContainer = root.querySelector('.main-page__feed');
-    RecipeCard.renderRecipeCards(mockRecipes, feedContainer, {
+    RecipeCard.renderRecipeCards(DataStore.getMainFeedRecipes(), feedContainer, {
         onFavoriteClick: (recipe) => {
+            DataStore.setRecipeFavorite(recipe.id, recipe.isFavorite);
             console.log(`Рецепт "${recipe.title}" добавлен в избранное:`, recipe.isFavorite);
         }
     });

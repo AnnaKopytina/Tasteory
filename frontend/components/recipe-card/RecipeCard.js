@@ -1,4 +1,8 @@
-import {renderRecipeCardIcon} from './icons.js';
+function renderIcon(name, className = '') {
+    return window.AppIcons?.render?.(name, className)
+        || window.AppIcons?.renderIcon?.(name, className)
+        || '';
+}
 
 export class RecipeCard {
     constructor(recipe, options = {}) {
@@ -21,7 +25,7 @@ export class RecipeCard {
                             aria-pressed="${Boolean(isFavorite)}"
                             title="Добавить в избранное">
                         <span class="recipe-card__favorite-icon" aria-hidden="true">
-                            ${renderRecipeCardIcon('bookmark', 'recipe-card__icon recipe-card__icon--bookmark')}
+                            ${renderIcon('bookmark', 'recipe-card__icon recipe-card__icon--bookmark')}
                         </span>
                     </button>
                 </div>
@@ -33,7 +37,7 @@ export class RecipeCard {
                         ${savedCount ? `
                             <div class="recipe-card__meta-item">
                                 <span class="recipe-card__meta-icon" aria-hidden="true">
-                                    ${renderRecipeCardIcon('bookmark', 'recipe-card__icon recipe-card__icon--bookmark recipe-card__icon--compact')}
+                                    ${renderIcon('bookmark', 'recipe-card__icon recipe-card__icon--bookmark recipe-card__icon--compact')}
                                 </span>
                                 <span>${savedCount}</span>
                             </div>
@@ -41,14 +45,14 @@ export class RecipeCard {
 
                         ${savedCount && time ? `
                             <span class="recipe-card__separator" aria-hidden="true">
-                                ${renderRecipeCardIcon('separator', 'recipe-card__icon recipe-card__icon--separator')}
+                                ${renderIcon('separator', 'recipe-card__icon recipe-card__icon--separator')}
                             </span>
                         ` : ''}
 
                         ${time ? `
                             <div class="recipe-card__meta-item">
                                 <span class="recipe-card__meta-icon recipe-card__meta-icon--time" aria-hidden="true">
-                                    ${renderRecipeCardIcon('time', 'recipe-card__icon recipe-card__icon--time')}
+                                    ${renderIcon('time', 'recipe-card__icon recipe-card__icon--time')}
                                 </span>
                                 <span>${time} Мин</span>
                             </div>

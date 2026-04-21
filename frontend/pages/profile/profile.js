@@ -1,4 +1,5 @@
 import { RecipeCard } from '../../components/recipe-card/RecipeCard.js';
+import {DataStore} from '../../services/data-store.js';
 
 const escapeHtml = window.AppUtils?.escapeHtml || ((value) => String(value)
 	.replaceAll('&', '&amp;')
@@ -23,13 +24,16 @@ const getInitials = window.AppUtils?.getInitials || ((fullName) => {
 	return `${firstLetter}${lastLetter}`.toUpperCase();
 });
 
-const profileState = {
+const profileUser = DataStore.getProfileUser() || {
 	name: 'Василькова Галина',
 	username: '@galka12345',
-	recipesCount: 2,
-	groupsCount: 0,
-	favoritesCount: 12,
 	avatarSrc: ''
+};
+
+const profileState = {
+	name: profileUser.name,
+	username: profileUser.username,
+	avatarSrc: profileUser.avatarSrc || ''
 };
 
 let activeTab = 'recipes';
@@ -47,7 +51,7 @@ function renderProfileAvatarMarkup() {
 }
 
 function renderLogoutIconMarkup() {
-	const icon = window.AppIcons?.renderIcon('logout', 'profile-logout-icon');
+	const icon = window.AppIcons?.render?.('logout', 'profile-logout-icon');
 	if (icon) {
 		return icon;
 	}
@@ -56,26 +60,30 @@ function renderLogoutIconMarkup() {
 }
 
 function getProfileRecipes() {
-	return [
-		{
-			id: 'profile-1',
-			title: 'Полезный салат со свежими овощами',
-			image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=500&auto=format&fit=crop',
-			author: profileState.name,
-			time: 20,
-			savingsCount: 35,
-			isFavorite: true
-		},
-		{
-			id: 'profile-2',
-			title: 'Паста с томатным соусом',
-			image: 'https://img.povar.ru/main-micro/00/00/6c/83/spagetti_chetire_pomidora-825929.jpg',
-			author: profileState.name,
-			time: 25,
-			savingsCount: 12,
-			isFavorite: false
-		}
-	];
+	return DataStore.getProfileRecipes();
+}
+
+function getFavoriteRecipes() {
+	return DataStore.getFavoriteRecipes();
+}
+
+function getProfileGroups() {
+	return DataStore.getProfileGroups();
+}
+
+function getProfileStats() {
+	return DataStore.getProfileStats();
+}
+
+function getGroupMemberCount(groupId) {
+	return DataStore.getGroupMembers(groupId).length;
+}
+
+function refreshProfileView(root) {
+	updateProfileHeader(root);
+	if (activeTab === 'groups') {
+		renderActiveProfileTab(root);
+	}
 }
 
 export function initProfilePage() {
@@ -100,7 +108,7 @@ function renderProfilePage(root) {
 					<div class="profile-meta">
 						<h1 class="profile-name">${escapeHtml(profileState.name)}</h1>
 						<p class="profile-id">${escapeHtml(profileState.username)}</p>
-						<p class="profile-stats">Рецепты: ${profileState.recipesCount} &nbsp;&nbsp; Группы: ${profileState.groupsCount} &nbsp;&nbsp; Избранное: ${profileState.favoritesCount}</p>
+									<p class="profile-stats">Рецепты: ${getProfileStats().recipesCount} &nbsp;&nbsp; Группы: ${getProfileStats().groupsCount} &nbsp;&nbsp; Избранное: ${getProfileStats().favoritesCount}</p>
 					</div>
 				</div>
 				<div class="profile-actions">
@@ -177,11 +185,27 @@ function bindProfileEvents(root) {
 
 		if (event.target.closest('[data-action="create-group"]')) {
 			window.GroupCreateModal?.open({
-				onCreated: () => {
-					profileState.groupsCount += 1;
-					updateProfileHeader(root);
-				}
+				onCreated: () => refreshProfileView(root)
 			});
+		}
+	});
+}
+
+function bindProfileStoreEvents() {
+	if (window.__tasteoryProfileStoreListenerBound) {
+		return;
+	}
+
+	window.__tasteoryProfileStoreListenerBound = true;
+	window.addEventListener('groups:changed', () => {
+		const root = document.getElementById('content-root');
+		if (!root?.querySelector('.profile-page')) {
+			return;
+		}
+
+		updateProfileHeader(root);
+		if (activeTab === 'groups') {
+			renderActiveProfileTab(root);
 		}
 	});
 }
@@ -239,7 +263,8 @@ function updateProfileHeader(root) {
 	}
 
 	if (stats) {
-		stats.innerHTML = `Рецепты: ${profileState.recipesCount} &nbsp;&nbsp; Группы: ${profileState.groupsCount} &nbsp;&nbsp; Избранное: ${profileState.favoritesCount}`;
+		const profileStats = getProfileStats();
+		stats.innerHTML = `Рецепты: ${profileStats.recipesCount} &nbsp;&nbsp; Группы: ${profileStats.groupsCount} &nbsp;&nbsp; Избранное: ${profileStats.favoritesCount}`;
 	}
 }
 
@@ -250,18 +275,26 @@ function renderActiveProfileTab(root) {
 	}
 
 	if (activeTab === 'groups') {
+		const groups = getProfileGroups();
 		content.innerHTML = `
 			<div class="profile-groups-actions">
 				<button type="button" class="profile-create-group-btn" data-action="create-group">Создать группу</button>
 			</div>
-			<div class="profile-empty profile-empty--compact">Группы скоро появятся</div>
+			${groups.length ? `
+				<div class="profile-groups-grid">
+					${groups.map((group) => `
+						<a class="profile-group-card page-card" href="/group/${escapeHtml(group.id)}">
+							<div class="profile-group-card__title">${escapeHtml(group.name)}</div>
+										<div class="profile-group-card__meta">${getGroupMemberCount(group.id)} участника · ${DataStore.getGroupRecipes(group.id).length} рецептов</div>
+						</a>
+					`).join('')}
+				</div>
+			` : '<div class="profile-empty profile-empty--compact">Группы скоро появятся</div>'}
 		`;
 		return;
 	}
 
-	const data = activeTab === 'favorites'
-		? getProfileRecipes().filter((recipe) => recipe.isFavorite)
-		: getProfileRecipes();
+	const data = activeTab === 'favorites' ? getFavoriteRecipes() : getProfileRecipes();
 
 	if (!data.length) {
 		content.innerHTML = '<div class="profile-empty">Пока здесь пусто</div>';
@@ -412,9 +445,14 @@ function openProfileEditModal(root) {
 
 		profileState.name = nextName;
 		profileState.avatarSrc = draftAvatarSrc;
+		const profileUserId = DataStore.getProfileUserId();
+		DataStore.updateUserName(profileUserId, nextName);
+		DataStore.updateUserAvatar(profileUserId, draftAvatarSrc);
 
 		updateProfileHeader(root);
-		if (activeTab !== 'groups') {
+		if (activeTab === 'groups') {
+			renderActiveProfileTab(root);
+		} else {
 			renderActiveProfileTab(root);
 		}
 		closeModal();
@@ -435,3 +473,4 @@ function openProfileEditModal(root) {
 	nameInput?.focus();
 }
 
+bindProfileStoreEvents();
