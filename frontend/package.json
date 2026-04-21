@@ -2,8 +2,7 @@
   "name": "tasteory-frontend",
   "version": "1.0.0",
   "scripts": {
-    "start": "browser-sync start --server --files './**/*' --single --listen 127.0.0.1",
-    "check:icons": "node ./scripts/check-icons.cjs"
+    "start": "browser-sync start --server --files './**/*' --single --listen 127.0.0.1"
   },
   "devDependencies": {
     "browser-sync": "^3.0.0"

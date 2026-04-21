@@ -1,5 +1,5 @@
-import { RecipeCard } from '../../components/recipe-card/RecipeCard.js';
-import { SearchFilters } from '../../components/search-filters/SearchFilters.js';
+import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
+import { SearchFilters } from '../../components/search-filters/search-filters.js';
 import {DataStore} from '../../services/data-store.js';
 
 const escapeHtml = window.AppUtils?.escapeHtml || ((value) => String(value)

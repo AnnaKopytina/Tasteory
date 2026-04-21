@@ -1,4 +1,4 @@
-import { RecipeCard } from '../../components/recipe-card/RecipeCard.js';
+import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
 import {DataStore} from '../../services/data-store.js';
 
 export function initFavoritePage() {

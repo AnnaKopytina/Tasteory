@@ -1,4 +1,4 @@
-import {createMockStore} from './mockData.js';
+import {createMockStore} from './mock-data.js';
 
 function ensureMockStore() {
     if (typeof window === 'undefined') {
