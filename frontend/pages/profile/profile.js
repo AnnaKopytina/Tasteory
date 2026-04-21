@@ -240,7 +240,7 @@ function toggleLogoutConfirm(root) {
 function logoutFromProfile() {
 	localStorage.removeItem('tasteory_token');
 	localStorage.removeItem('tasteory_auth_session');
-	window.location.href = '/auth.html';
+	window.AppRouter?.navigate('/auth');
 }
 
 function updateProfileHeader(root) {

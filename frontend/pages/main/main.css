@@ -11,7 +11,13 @@
 
 .main-page__feed {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, 285px);
-	gap: 20px;
+	grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+	gap: 16px;
 	align-items: stretch;
+}
+
+@media (max-width: 768px) {
+	.main-page__feed {
+		grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+	}
 }
