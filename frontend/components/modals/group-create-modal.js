@@ -1,3 +1,5 @@
+import {DataStore} from '../../services/data-store.js';
+
 (() => {
     const escapeHtml = window.AppUtils?.escapeHtml || ((value) => String(value)
         .replaceAll('&', '&amp;')
@@ -5,19 +7,6 @@
         .replaceAll('>', '&gt;')
         .replaceAll('"', '&quot;')
         .replaceAll("'", '&#39;'));
-
-    function buildMembersMarkup(memberIds) {
-        if (!memberIds.length) {
-            return '<li class="group-modal__hint">Пока нет добавленных участников</li>';
-        }
-
-        return memberIds.map((memberId, index) => `
-            <li class="group-modal__member-item">
-                <span>${escapeHtml(memberId)}</span>
-                <button type="button" class="group-modal__remove-member" data-remove-index="${index}" aria-label="Удалить участника ${escapeHtml(memberId)}">×</button>
-            </li>
-        `).join('');
-    }
 
     function findContentRoot() {
         return document.getElementById('content-root');
@@ -64,7 +53,7 @@
 
     function open(options = {}) {
         const root = findContentRoot();
-        if (!root || !window.ApiService) {
+        if (!root) {
             return null;
         }
 
@@ -73,7 +62,9 @@
             existing.remove();
         }
 
-        const memberIds = [];
+        const inviteId = Math.random().toString(36).substring(2, 8);
+        const inviteLink = `${window.location.origin}/join/${inviteId}`;
+
         const backdrop = document.createElement('div');
         backdrop.className = 'group-modal-backdrop';
         backdrop.innerHTML = `
@@ -87,15 +78,11 @@
                     <label class="group-modal__label" for="group-name-input">Название группы</label>
                     <input id="group-name-input" class="group-modal__input" name="groupName" type="text" placeholder="Например, Семья" maxlength="80" required />
 
-                    <label class="group-modal__label" for="member-id-input">Добавить участников по ID</label>
+                    <label class="group-modal__label" for="group-invite-link">Ссылка для приглашения</label>
                     <div class="group-modal__member-add-row">
-                        <input id="member-id-input" class="group-modal__input" type="text" placeholder="Введите ID пользователя" />
-                        <button type="button" class="group-modal__add-member" data-action="add-member">Добавить</button>
+                        <input id="group-invite-link" class="group-modal__input" type="text" value="${escapeHtml(inviteLink)}" readonly />
+                        <button type="button" class="group-modal__add-member" data-action="copy-link">Копировать</button>
                     </div>
-
-                    <ul class="group-modal__members" data-members-list>
-                        ${buildMembersMarkup(memberIds)}
-                    </ul>
 
                     <p class="group-modal__status" data-group-status></p>
 
@@ -112,11 +99,10 @@
 
         const form = backdrop.querySelector('[data-group-form]');
         const groupNameInput = backdrop.querySelector('input[name="groupName"]');
-        const memberIdInput = backdrop.querySelector('#member-id-input');
-        const membersList = backdrop.querySelector('[data-members-list]');
+        const inviteLinkInput = backdrop.querySelector('#group-invite-link');
         const status = backdrop.querySelector('[data-group-status]');
 
-        if (!form || !groupNameInput || !memberIdInput || !membersList || !status) {
+        if (!form || !groupNameInput || !inviteLinkInput || !status) {
             backdrop.remove();
             return null;
         }
@@ -130,29 +116,6 @@
         function showStatus(message, isError = false) {
             status.textContent = message;
             status.classList.toggle('is-error', isError);
-        }
-
-        function updateMembersList() {
-            membersList.innerHTML = buildMembersMarkup(memberIds);
-        }
-
-        function addMemberFromInput() {
-            const value = memberIdInput.value.trim();
-            if (!value) {
-                showStatus('Введите ID участника', true);
-                return;
-            }
-
-            if (memberIds.includes(value)) {
-                showStatus('Этот ID уже добавлен', true);
-                return;
-            }
-
-            memberIds.push(value);
-            memberIdInput.value = '';
-            showStatus('');
-            updateMembersList();
-            memberIdInput.focus();
         }
 
         function onEscClose(event) {
@@ -170,31 +133,14 @@
                 return;
             }
 
-            const addMemberButton = event.target.closest('[data-action="add-member"]');
-            if (addMemberButton) {
-                addMemberFromInput();
-                return;
-            }
-
-            const removeMemberButton = event.target.closest('[data-remove-index]');
-            if (!removeMemberButton) {
-                return;
-            }
-
-            const index = Number(removeMemberButton.getAttribute('data-remove-index'));
-            if (!Number.isInteger(index) || index < 0 || index >= memberIds.length) {
-                return;
-            }
-
-            memberIds.splice(index, 1);
-            showStatus('');
-            updateMembersList();
-        });
-
-        memberIdInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                addMemberFromInput();
+            const copyLinkButton = event.target.closest('[data-action="copy-link"]');
+            if (copyLinkButton) {
+                navigator.clipboard.writeText(inviteLinkInput.value).then(() => {
+                    showStatus('Ссылка скопирована!');
+                    setTimeout(() => showStatus(''), 3000);
+                }).catch(() => {
+                    showStatus('Не удалось скопировать ссылку', true);
+                });
             }
         });
 
@@ -215,7 +161,7 @@
             showStatus('Создаем группу...');
 
             try {
-                const createdGroup = await window.ApiService.addGroup(groupName, memberIds);
+                const createdGroup = await Promise.resolve(DataStore.createGroup(groupName, []));
                 window.dispatchEvent(new CustomEvent('groups:changed', { detail: createdGroup }));
                 if (typeof options.onCreated === 'function') {
                     options.onCreated(createdGroup);
@@ -237,4 +183,3 @@
 
     window.GroupCreateModal = { open };
 })();
-

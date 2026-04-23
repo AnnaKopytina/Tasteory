@@ -3,6 +3,12 @@
     const loadingStyles = new Map();
 
     const routes = {
+        '/auth': {
+            title: 'Вход',
+            css: '/auth/auth.css',
+            module: '../auth/auth.js',
+            initKey: 'initAuthPage'
+        },
         '/': { title: 'Главная', css: ['/pages/main/main.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'], module: '../pages/main/main.js', initKey: 'initMainPage' },
         '/main': { title: 'Главная', css: ['/pages/main/main.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'], module: '../pages/main/main.js', initKey: 'initMainPage' },
         '/recipe': { title: 'Рецепт', css: '/pages/recipe/recipe.css', module: '../pages/recipe/recipe.js', initKey: 'initRecipePage' },
@@ -64,6 +70,15 @@
             route: routes[routeKey],
             dynamicId: null
         };
+    }
+
+    function isAuthorized() {
+        return Boolean(localStorage.getItem('tasteory_token'));
+    }
+
+    function applyLayoutMode(routeKey) {
+        const isAuthRoute = routeKey === '/auth';
+        document.body.classList.toggle('auth-route', isAuthRoute);
     }
 
     async function ensureStylesheet(href) {
@@ -160,8 +175,26 @@
 
         const { path, params } = parseUrl(url);
         const { route, routeKey, dynamicId } = resolveRoute(path);
+        const hasToken = isAuthorized();
+
+        if (routeKey !== '/auth' && !hasToken) {
+            const redirectUrl = '/auth';
+            if (pushState && window.location.pathname + window.location.search !== redirectUrl) {
+                window.history.pushState({}, routes['/auth'].title, redirectUrl);
+            }
+            return renderPage(redirectUrl, false);
+        }
+
+        if (routeKey === '/auth' && hasToken) {
+            const redirectUrl = '/main';
+            if (pushState && window.location.pathname + window.location.search !== redirectUrl) {
+                window.history.pushState({}, routes['/main'].title, redirectUrl);
+            }
+            return renderPage(redirectUrl, false);
+        }
 
         document.title = route.title;
+        applyLayoutMode(routeKey);
 
         if (pushState && window.location.pathname + window.location.search !== url) {
             window.history.pushState({}, route.title, url);
@@ -228,7 +261,7 @@
         return renderPage(url, pushState);
     }
 
-    window.AppRouter = { start };
+    window.AppRouter = { start, navigate };
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start);

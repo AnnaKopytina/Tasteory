@@ -1,65 +1,30 @@
-const recipeMockData = {
-    id: "salat-123",
-    title: "Полезный салат со свежими овощами",
-    author: "Василькова Галина",
-    mainImage: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=2070&auto=format&fit=crop",
-    time: 20,
-    peopleCount: 35,
-    baseServings: 2,
-    currentServings: 2,
-    isFavorite: false,
-    ingredientsGroups: [
-        {
-            name: "Соус",
-            isOpen: true,
-            items: [
-                { name: "Оливковое масло", count: 3, measure: "ст. л." },
-                { name: "Белый винный уксус", count: 1, measure: "ст. л." },
-                { name: "Соль", count: 1, measure: "ч. л." },
-                { name: "Орегано", count: 1, measure: "ч. л." },
-                { name: "Черный молотый перец", count: 0.5, measure: "ч. л." }
-            ]
-        },
-        {
-            name: "Салат",
-            isOpen: true,
-            items: [
-                { name: "Сыр фета", count: 150, measure: "г." },
-                { name: "Помидоры черри", count: 200, measure: "г." },
-                { name: "Огурцы", count: 200, measure: "г." },
-                { name: "Салат айсберг", count: 100, measure: "г." }
-            ]
-        }
-    ],
-    steps: [
-        {
-            number: 1,
-            text: "Несколько веточек петрушки вымойте и мелко нарежьте. В миску выложите греческий йогурт. Добавьте к нему сок половины лимона и дижонскую горчицу. Посолите и поперчите заправку, добавьте нарезанную петрушку. Смешайте ингредиенты венчиком до получения однородной консистенции соуса.",
-            media: null,
-            note: null
-        },
-        {
-            number: 2,
-            text: "Огурцы нарежьте полукружьями. Помидоры черри разрежьте пополам. Листья салата порвите руками на небольшие кусочки.",
-            media: { type: "photo", url: "https://avatars.mds.yandex.net/i?id=2836767a3a21a42bc418181ea028ae429d22d828-9859359-images-thumbs&n=13" },
-            note: null
-        },
-        {
-            number: 3,
-            text: "",
-            media: { type: "photo", url: "https://images.unsplash.com/photo-1559181567-c3190ca9959b?q=80&w=1000" },
-            note: "Для более нежного вкуса можно использовать сыр сиртаки, но тогда солите меньше."
-        }
-    ]
-};
+import {DataStore} from '../../services/data-store.js';
+
+let currentRecipeData = null;
+
+function getCurrentRecipe() {
+    return currentRecipeData;
+}
 
 function renderIcon(name, className = '') {
-    return window.AppIcons?.renderIcon(name, className) || '';
+    return window.AppIcons?.render?.(name, className)
+        || window.AppIcons?.renderIcon?.(name, className)
+        || '';
 }
 
 export function initRecipePage(id) {
     const root = document.getElementById('content-root');
-    const data = recipeMockData;
+    if (!root) {
+        return;
+    }
+
+    const data = DataStore.getRecipeDetails(id);
+    if (!data) {
+        root.innerHTML = '<section class="recipe-inner"><div class="page-card"><h1>Рецепт не найден</h1></div></section>';
+        return;
+    }
+
+    currentRecipeData = data;
 
     loadNotesFromStorage(data);
 
@@ -203,6 +168,11 @@ function renderIngredients(data) {
 }
 
 function watchIng(index) {
+    const data = getCurrentRecipe();
+    if (!data) {
+        return;
+    }
+
     const groups = document.querySelectorAll('.ing-group');
     const targetGroup = groups[index];
     if (!targetGroup) return;
@@ -211,25 +181,35 @@ function watchIng(index) {
     const arrow = targetGroup.querySelector('.arrow-icon');
     list.classList.toggle('hidden');
     arrow.classList.toggle('active');
-    recipeMockData.ingredientsGroups[index].isOpen = !list.classList.contains('hidden');
+    data.ingredientsGroups[index].isOpen = !list.classList.contains('hidden');
 }
 
 function changeServings(delta) {
-    const data = recipeMockData;
+    const data = getCurrentRecipe();
+    if (!data) {
+        return;
+    }
+
     const newVal = data.currentServings + delta;
     if (newVal >= 1 && newVal <= 20) {
         data.currentServings = newVal;
-        initRecipePage(data.id); // Перерисовываем
+        initRecipePage(data.id);
     }
 }
 
 function toggleFavorite() {
-    recipeMockData.isFavorite = !recipeMockData.isFavorite;
-    initRecipePage(recipeMockData.id);
+    const data = getCurrentRecipe();
+    if (!data) {
+        return;
+    }
+
+    const nextFavorite = !data.isFavorite;
+    DataStore.setRecipeFavorite(data.id, nextFavorite);
+    data.isFavorite = nextFavorite;
+    initRecipePage(data.id);
 }
 
 /* ШАГИ */
-let originalNoteValue = "";
 
 function renderSteps(data) {
     return data.steps.map((step, i) => {
@@ -311,22 +291,32 @@ function syncAllNoteHeights() {
 
 /* ИНТЕРАКТИВА С ЗАМЕТКОЙ*/
 function addNote(index) {
-    recipeMockData.steps[index].note = "";
-    saveNoteToStorage(recipeMockData.id, index, "");
+    const data = getCurrentRecipe();
+    if (!data) {
+        return;
+    }
+
+    data.steps[index].note = "";
+    saveNoteToStorage(data.id, index, "");
     const action = document.getElementById(`note-action-${index}`);
     const area = document.getElementById(`note-area-${index}`);
     if (action) {
         action.innerHTML = '';
     }
-    area.innerHTML = renderNoteElement(recipeMockData.steps[index].note, index);
+    area.innerHTML = renderNoteElement(data.steps[index].note, index);
     const textarea = area.querySelector('.note-paper');
     autoResizeNote(textarea);
     textarea.focus();
 }
 
 function deleteNote(index) {
-    recipeMockData.steps[index].note = null;
-    saveNoteToStorage(recipeMockData.id, index, null);
+    const data = getCurrentRecipe();
+    if (!data) {
+        return;
+    }
+
+    data.steps[index].note = null;
+    saveNoteToStorage(data.id, index, null);
     const action = document.getElementById(`note-action-${index}`);
     if (action) {
         action.innerHTML = renderAddNoteButton(null, index);
@@ -335,14 +325,15 @@ function deleteNote(index) {
     console.log(`Заметка удалена из шага ${index + 1} `);
 }
 
-function focusNote(index, el) {
-    originalNoteValue = el.innerText;
-}
-
 function handleNoteInput(index, textarea) {
+    const data = getCurrentRecipe();
+    if (!data) {
+        return;
+    }
+
     autoResizeNote(textarea);
-    recipeMockData.steps[index].note = textarea.value;
-    saveNoteToStorage(recipeMockData.id, index, textarea.value);
+    data.steps[index].note = textarea.value;
+    saveNoteToStorage(data.id, index, textarea.value);
     console.log("Заметка сохранена: ", textarea.value);
 }
 
@@ -352,6 +343,5 @@ Object.assign(window, {
     toggleFavorite,
     addNote,
     deleteNote,
-    focusNote,
     handleNoteInput
 });

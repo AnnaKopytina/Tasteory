@@ -1,12 +1,14 @@
+import {DataStore} from '../../services/data-store.js';
+
 (() => {
-    const renderIcon = window.AppIcons?.renderIcon;
+    const renderIcon = window.AppIcons?.render;
 
     function createIcon(iconName, className = '') {
         if (!renderIcon) {
             return null;
         }
 
-        const html = window.AppIcons.renderIcon(iconName, className);
+        const html = renderIcon(iconName, className);
         if (!html) {
             return null;
         }
@@ -83,7 +85,7 @@
         groupsList.innerHTML = '<div class="sub-item">Загрузка групп...</div>';
 
         try {
-            const groupsData = await ApiService.getMyGroups();
+            const groupsData = await Promise.resolve(DataStore.getMyGroups());
             groupsList.innerHTML = '';
 
             if (!groupsData.length) {

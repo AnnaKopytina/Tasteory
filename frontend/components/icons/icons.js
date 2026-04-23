@@ -96,36 +96,19 @@
         `
     };
 
-    const ICON_ALIASES = {
-        favourite: 'favorite',
-        'time-circle': 'timeCircle',
-        time_circle: 'timeCircle',
-        openIcon: 'open',
-        'sidebar-time': 'timeCircle',
-        'sidebar-open': 'open',
-        'sidebar-group': 'group',
-        'sidebar-profile': 'profile',
-        'sidebar-plus': 'plus',
-        'sidebar-book': 'book',
-        'favourites-small': 'favoritesSmall',
-        favourites_small: 'favoritesSmall',
-        favouritesSmall: 'favoritesSmall',
-        'favourites-big': 'bookmark',
-        'favourites_big': 'bookmark',
-        'bookbark-filled': 'bookmark',
-        bookbark: 'bookmark'
-    };
-
     function normalizeIconName(name) {
         if (typeof name !== 'string') {
             return '';
         }
 
-        const normalizedName = name.trim();
-        return ICON_ALIASES[normalizedName] || normalizedName;
+        return name.trim();
     }
 
-    function renderIcon(name, className = '') {
+    function list() {
+        return Object.keys(ICONS);
+    }
+
+    function render(name, className = '') {
         const normalizedName = normalizeIconName(name);
         const icon = ICONS[normalizedName];
         if (!icon) {
@@ -140,5 +123,9 @@
         return icon.replace('<svg ', `<svg class="${escapeHtml(className)}" `).trim();
     }
 
-    window.AppIcons = { renderIcon, escapeHtml, normalizeIconName };
+    window.AppIcons = {
+        render,
+        list,
+        escapeHtml
+    };
 })();

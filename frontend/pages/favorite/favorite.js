@@ -1,25 +1,5 @@
-import { RecipeCard } from '../../components/recipe-card/RecipeCard.js';
-
-const favoriteRecipes = [
-    {
-        id: 'fav-1',
-        title: 'Полезный салат со свежими овощами',
-        image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=500&auto=format&fit=crop',
-        author: 'Василькова Галина',
-        time: 20,
-        servings: 35,
-        isFavorite: true
-    },
-    {
-        id: 'fav-2',
-        title: 'Паста с томатным соусом',
-        image: 'https://img.povar.ru/main-micro/00/00/6c/83/spagetti_chetire_pomidora-825929.jpg',
-        author: 'Петров Иван',
-        time: 25,
-        servings: 12,
-        isFavorite: true
-    }
-];
+import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
+import {DataStore} from '../../services/data-store.js';
 
 export function initFavoritePage() {
     const root = document.getElementById('content-root');
@@ -35,7 +15,7 @@ export function initFavoritePage() {
     `;
 
     const feedContainer = root.querySelector('.favorite-page__feed');
-    const items = favoriteRecipes.filter((recipe) => recipe.isFavorite);
+    const items = DataStore.getFavoriteRecipes();
 
     if (!items.length) {
         feedContainer.innerHTML = '<div class="favorite-page__empty page-card">Пока нет избранных рецептов</div>';
@@ -43,8 +23,9 @@ export function initFavoritePage() {
     }
 
     RecipeCard.renderRecipeCards(items, feedContainer, {
-        onFavoriteClick: () => {
-            const updatedItems = favoriteRecipes.filter((recipe) => recipe.isFavorite);
+        onFavoriteClick: (recipe) => {
+            DataStore.setRecipeFavorite(recipe.id, recipe.isFavorite);
+            const updatedItems = DataStore.getFavoriteRecipes();
             if (!updatedItems.length) {
                 feedContainer.innerHTML = '<div class="favorite-page__empty page-card">Пока нет избранных рецептов</div>';
                 return;
