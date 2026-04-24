@@ -1,39 +1,96 @@
 import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
-import {DataStore} from '../../services/data-store.js';
 
-export function initFavoritePage() {
+export async function initFavoritePage() {
     const root = document.getElementById('content-root');
+    if (!root) {
+        return;
+    }
 
+    renderSkeleton(root);
+
+    const feedContainer = root.querySelector('.favorite-page__feed');
+
+    try {
+        const response = await fetchFavoritesData();
+        await handleFavoritesResponse(response, feedContainer, root);
+    } catch (error) {
+        handleError(feedContainer, error);
+    }
+}
+
+function renderSkeleton(root) {
     root.innerHTML = `
         <section class="favorite-page">
             <div class="favorite-page__header page-card">
                 <h1 class="favorite-page__title">Избранное</h1>
             </div>
-
-            <div class="favorite-page__feed"></div>
+            <div class="favorite-page__feed">
+                <div class="loader">Загрузка ваших закладок...</div>
+            </div>
         </section>
     `;
+}
 
-    const feedContainer = root.querySelector('.favorite-page__feed');
-    const items = DataStore.getFavoriteRecipes();
+async function fetchFavoritesData() {
+    return await fetch('/api/users/me/favorites?page=1&pageSize=50', {
+        method: 'GET',
+        credentials: 'include'
+    });
+}
 
-    if (!items.length) {
-        feedContainer.innerHTML = '<div class="favorite-page__empty page-card">Пока нет избранных рецептов</div>';
+async function handleFavoritesResponse(response, feedContainer, root) {
+    if (!response.ok) {
+        if (response.status === 401) {
+            window.AppRouter.navigate('/auth');
+            return;
+        }
+        throw new Error('Ошибка при загрузке избранного');
+    }
+
+    const data = await response.json();
+    const items = data.items || [];
+
+    if (items.length === 0) {
+        renderEmptyState(feedContainer);
         return;
     }
 
-    RecipeCard.renderRecipeCards(items, feedContainer, {
-        onFavoriteClick: (recipe) => {
-            DataStore.setRecipeFavorite(recipe.id, recipe.isFavorite);
-            const updatedItems = DataStore.getFavoriteRecipes();
-            if (!updatedItems.length) {
-                feedContainer.innerHTML = '<div class="favorite-page__empty page-card">Пока нет избранных рецептов</div>';
-                return;
-            }
+    const mappedRecipes = mapRecipes(items);
+    renderFeed(feedContainer, mappedRecipes, root);
+}
 
-            RecipeCard.renderRecipeCards(updatedItems, feedContainer, {
-                onFavoriteClick: () => initFavoritePage()
-            });
+function renderEmptyState(container) {
+    container.innerHTML = `
+        <div class="favorite-page__empty page-card">
+            Здесь будут рецепты, которые вы сохраните
+        </div>`;
+}
+
+function mapRecipes(items) {
+    return items.map((r) => {
+        return {
+            ...r,
+            image: r.mainImage,
+            time: r.timeMinutes,
+            author: r.authorName,
+            isFavorite: true
+        };
+    });
+}
+
+function handleError(container, error) {
+    console.error(error);
+    container.innerHTML = '<div class="favorite-page__empty page-card">Не удалось загрузить данные</div>';
+}
+
+function renderFeed(container, recipes, root) {
+    container.innerHTML = '';
+
+    RecipeCard.renderRecipeCards(recipes, container, {
+        onFavoriteClick: (recipe) => {
+            if (!recipe.isFavorite) {
+                initFavoritePage();
+            }
         }
     });
 }

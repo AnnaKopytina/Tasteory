@@ -3,104 +3,75 @@
     const loadingStyles = new Map();
 
     const routes = {
-        '/auth': {
-            title: 'Вход',
-            css: '/auth/auth.css',
-            module: '../auth/auth.js',
-            initKey: 'initAuthPage'
-        },
+        '/auth': { title: 'Вход', css: '/auth/auth.css', module: '../auth/auth.js', initKey: 'initAuthPage' },
         '/': { title: 'Главная', css: ['/pages/main/main.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'], module: '../pages/main/main.js', initKey: 'initMainPage' },
         '/main': { title: 'Главная', css: ['/pages/main/main.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'], module: '../pages/main/main.js', initKey: 'initMainPage' },
         '/recipe': { title: 'Рецепт', css: '/pages/recipe/recipe.css', module: '../pages/recipe/recipe.js', initKey: 'initRecipePage' },
         '/create': { title: 'Создать', css: '/pages/create/create.css', module: '../pages/create/create.js', initKey: 'initCreatePage' },
-        '/favorite': {
-            title: 'Избранное',
-            css: ['/pages/favorite/favorite.css', '/components/recipe-card/recipe-card.css'],
-            module: '../pages/favorite/favorite.js',
-            initKey: 'initFavoritePage'
-        },
-        '/profile': {
-            title: 'Профиль',
-            css: ['/pages/profile/profile.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'],
-            module: '../pages/profile/profile.js',
-            initKey: 'initProfilePage'
-        },
-        '/group': {
-            title: 'Группа',
-            css: ['/pages/group/group.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'],
-            module: '../pages/group/group.js',
-            initKey: 'initGroupPage'
-        }
+        '/favorite': { title: 'Избранное', css: ['/pages/favorite/favorite.css', '/components/recipe-card/recipe-card.css'], module: '../pages/favorite/favorite.js', initKey: 'initFavoritePage' },
+        '/profile': { title: 'Профиль', css: ['/pages/profile/profile.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'], module: '../pages/profile/profile.js', initKey: 'initProfilePage' },
+        '/group': { title: 'Группа', css: ['/pages/group/group.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'], module: '../pages/group/group.js', initKey: 'initGroupPage' }
     };
 
     const state = {
         contentRoot: null,
-        started: false
+        started: false,
+        isAuthenticated: null
     };
 
     function getContentRoot() {
         if (!state.contentRoot) {
             state.contentRoot = document.getElementById('content-root');
         }
-
         return state.contentRoot;
     }
 
     function parseUrl(url) {
         const [path, search = ''] = url.split('?');
-        return {
-            path,
-            search,
-            params: new URLSearchParams(search)
-        };
+        return { path, search, params: new URLSearchParams(search) };
     }
 
     function resolveRoute(path) {
         if (path.startsWith('/group/')) {
-            return {
-                routeKey: '/group',
-                route: routes['/group'],
-                dynamicId: path.split('/')[2] || null
-            };
+            return { routeKey: '/group', route: routes['/group'], dynamicId: path.split('/')[2] || null };
         }
-
         const routeKey = routes[path] ? path : '/main';
-        return {
-            routeKey,
-            route: routes[routeKey],
-            dynamicId: null
-        };
+        return { routeKey, route: routes[routeKey], dynamicId: null };
     }
 
-    function isAuthorized() {
-        return Boolean(localStorage.getItem('tasteory_token'));
+    async function isAuthorized() {
+        if (state.isAuthenticated !== null) {
+            return state.isAuthenticated;
+        }
+        try {
+            const response = await fetch('/api/auth/status', { method: 'GET', credentials: 'include' });
+            state.isAuthenticated = response.ok;
+            return state.isAuthenticated;
+        } catch (error) {
+            state.isAuthenticated = false;
+            return false;
+        }
+    }
+
+    function setAuthState(isAuth) {
+        state.isAuthenticated = isAuth;
     }
 
     function applyLayoutMode(routeKey) {
-        const isAuthRoute = routeKey === '/auth';
-        document.body.classList.toggle('auth-route', isAuthRoute);
+        document.body.classList.toggle('auth-route', routeKey === '/auth');
     }
 
     async function ensureStylesheet(href) {
         if (!href) {
             return;
         }
-
         if (loadedStyles.has(href)) {
-            loadedStyles.add(href);
             return;
         }
-
         if (loadingStyles.has(href)) {
             return loadingStyles.get(href);
         }
-
-        if (document.querySelector(`link[href="${href}"]`)) {
-            loadedStyles.add(href);
-            return;
-        }
-
-        const promise = new Promise((resolve, reject) => {
+        const promise = new Promise((resolve) => {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = href;
@@ -109,13 +80,8 @@
                 loadingStyles.delete(href);
                 resolve();
             };
-            link.onerror = (error) => {
-                loadingStyles.delete(href);
-                reject(error);
-            };
             document.head.appendChild(link);
         });
-
         loadingStyles.set(href, promise);
         return promise;
     }
@@ -135,18 +101,12 @@
         if (!root) {
             return;
         }
-
-        root.innerHTML = `
-            <div class="page-card">
-                <h1>${title}</h1>
-                <p>${message}</p>
-                <button class="nav-item" data-action="go-home" style="border:1px solid #ccc; margin-top:20px; cursor:pointer">Вернуться на главную</button>
-            </div>
-        `;
-
+        root.innerHTML = `<div class="page-card"><h1>${title}</h1><p>${message}</p><button class="nav-item" data-action="go-home" style="border:1px solid #ccc; margin-top:20px; cursor:pointer">Вернуться на главную</button></div>`;
         const button = root.querySelector('[data-action="go-home"]');
         if (button) {
-            button.addEventListener('click', () => navigate('/main'));
+            button.addEventListener('click', () => {
+                navigate('/main');
+            });
         }
     }
 
@@ -159,12 +119,33 @@
         if (!route || !pageModule) {
             return null;
         }
+        return pageModule[route.initKey] || pageModule.default || null;
+    }
 
-        if (route.initKey && typeof pageModule[route.initKey] === 'function') {
-            return pageModule[route.initKey];
+    async function handleJoinRedirect(code, root) {
+        root.innerHTML = '<div class="loader">Присоединяемся к группе...</div>';
+        try {
+            const res = await fetch('/api/groups/join', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inviteCode: code }),
+                credentials: 'include'
+            });
+            if (res.ok) {
+                const data = await res.json();
+                window.dispatchEvent(new CustomEvent('groups:changed'));
+                return navigate(`/group/${data.groupId}`, true);
+            } else {
+                const err = await res.json().catch(() => {
+                    return {};
+                });
+                showError(err.message || 'Неверный или просроченный код приглашения.');
+                return;
+            }
+        } catch (e) {
+            showError('Ошибка сети при попытке вступить в группу.');
+            return;
         }
-
-        return pageModule.default || null;
     }
 
     async function renderPage(url, pushState = true) {
@@ -174,25 +155,36 @@
         }
 
         const { path, params } = parseUrl(url);
+
+        if (path === '/join') {
+            const code = params.get('code');
+            if (code) {
+                return handleJoinRedirect(code, root);
+            }
+            return navigate('/main', true);
+        }
+
         const { route, routeKey, dynamicId } = resolveRoute(path);
-        const hasToken = isAuthorized();
+        const hasToken = await isAuthorized();
 
         if (routeKey !== '/auth' && !hasToken) {
-            const redirectUrl = '/auth';
-            if (pushState && window.location.pathname + window.location.search !== redirectUrl) {
-                window.history.pushState({}, routes['/auth'].title, redirectUrl);
+            if (pushState) {
+                window.history.pushState({}, '', '/auth');
             }
-            return renderPage(redirectUrl, false);
+            return renderPage('/auth', false);
         }
 
         if (routeKey === '/auth' && hasToken) {
-            const redirectUrl = '/main';
-            if (pushState && window.location.pathname + window.location.search !== redirectUrl) {
-                window.history.pushState({}, routes['/main'].title, redirectUrl);
+            if (pushState) {
+                window.history.pushState({}, '', '/main');
             }
-            return renderPage(redirectUrl, false);
+            return renderPage('/main', false);
         }
 
+        await executePageRender(route, routeKey, url, root, params, dynamicId, pushState);
+    }
+
+    async function executePageRender(route, routeKey, url, root, params, dynamicId, pushState) {
         document.title = route.title;
         applyLayoutMode(routeKey);
 
@@ -207,18 +199,20 @@
             await loadRouteAssets(route);
             const pageModule = await import(route.module);
             root.innerHTML = '';
-
             const initFunc = resolveInitFn(route, pageModule);
+
             if (typeof initFunc !== 'function') {
-                showError(`init-функция не найдена для маршрута ${routeKey}`);
                 return;
             }
 
             if (routeKey === '/recipe') {
-                initFunc(params.get('id'));
+                initFunc(params);
                 return;
             }
-
+            if (routeKey === '/create') {
+                initFunc(params);
+                return;
+            }
             if (routeKey === '/group') {
                 initFunc(dynamicId);
                 return;
@@ -226,8 +220,8 @@
 
             initFunc();
         } catch (error) {
-            console.error('Render Error:', error);
-            showError('Не удалось загрузить модуль страницы. Проверьте пути к файлам.');
+            showError('Не удалось загрузить страницу.');
+            console.error(error);
         }
     }
 
@@ -236,12 +230,10 @@
         if (!link) {
             return;
         }
-
         const url = link.getAttribute('href');
-        if (!url || url.startsWith('http')) {
+        if (!url || url === '#' || url.startsWith('http') || url.startsWith('javascript:')) {
             return;
         }
-
         event.preventDefault();
         navigate(url);
     }
@@ -250,10 +242,11 @@
         if (state.started) {
             return;
         }
-
         state.started = true;
         document.addEventListener('click', handleDocumentClick);
-        window.addEventListener('popstate', () => renderPage(window.location.pathname + window.location.search, false));
+        window.addEventListener('popstate', () => {
+            renderPage(window.location.pathname + window.location.search, false);
+        });
         renderPage(window.location.pathname + window.location.search, false);
     }
 
@@ -261,8 +254,7 @@
         return renderPage(url, pushState);
     }
 
-    window.AppRouter = { start, navigate };
-
+    window.AppRouter = { start, navigate, setAuthState };
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start);
     } else {
@@ -270,7 +262,48 @@
     }
 })();
 
+export const RECIPE_FILTERS = [{ id: 'breakfast', label: 'Завтрак' }, { id: 'lunch', label: 'Обед' }, { id: 'dinner', label: 'Ужин' }];
 
+export function createRecipeFiltersState() {
+    return { searchValue: '', activeFilters: new Set() };
+}
 
+export function filterRecipes(recipes, state) {
+    const searchValue = state?.searchValue?.trim().toLowerCase() || '';
+    const activeFilters = state?.activeFilters || new Set();
+    return (recipes || []).filter((recipe) => {
+        const title = String(recipe?.title || '').toLowerCase();
+        const matchesSearch = !searchValue || title.includes(searchValue);
+        const matchesFilters = activeFilters.size === 0 || activeFilters.has(recipe?.type);
+        return matchesSearch && matchesFilters;
+    });
+}
 
-
+(() => {
+    function escapeHtml(value) {
+        return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
+    }
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+    function filenameFromPath(path) {
+        if (!path) {
+            return '';
+        }
+        return String(path).split('/').pop() || '';
+    }
+    function getInitials(fullName) {
+        const normalized = String(fullName || '').trim();
+        if (!normalized) {
+            return '?';
+        }
+        const parts = normalized.split(/\s+/).filter(Boolean);
+        const firstLetter = Array.from(parts[0] || '')[0] || '';
+        if (parts.length === 1) {
+            return firstLetter.toUpperCase();
+        }
+        const lastLetter = Array.from(parts[parts.length - 1] || '')[0] || '';
+        return `${firstLetter}${lastLetter}`.toUpperCase();
+    }
+    window.AppUtils = { escapeHtml, clamp, filenameFromPath, getInitials };
+})();

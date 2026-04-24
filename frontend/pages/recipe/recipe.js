@@ -1,347 +1,337 @@
-import {DataStore} from '../../services/data-store.js';
-
-let currentRecipeData = null;
-
-function getCurrentRecipe() {
-    return currentRecipeData;
+function getPlural(n, one, few, many) {
+    let res = n % 10;
+    if (n % 100 > 10 && n % 100 < 20) {
+        return many;
+    }
+    if (res === 1) {
+        return one;
+    }
+    if (res >= 2 && res <= 4) {
+        return few;
+    }
+    return many;
 }
 
-function renderIcon(name, className = '') {
-    return window.AppIcons?.render?.(name, className)
-        || window.AppIcons?.renderIcon?.(name, className)
-        || '';
-}
+window.saveNote = async function(stepId, text, isPrivate) {
+    const gid = window.currentGroupId;
+    const trimmed = text.trim();
+    try {
+        if (!trimmed) {
+            await fetch(`/api/notes/step/${stepId}?isPrivate=${isPrivate}${gid ? `&groupId=${gid}` : ''}`, {
+                method: 'DELETE',
+                credentials: 'include'
+            });
+        } else {
+            await fetch('/api/notes', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    stepId,
+                    text: trimmed,
+                    isPrivate,
+                    groupId: isPrivate ? null : gid
+                }),
+                credentials: 'include'
+            });
+        }
+    } catch (e) {
+        console.error(e);
+    }
+};
 
-export function initRecipePage(id) {
+window.autoResizeNote = function(textarea) {
+    if (!textarea) {
+        return;
+    }
+    textarea.style.height = 'auto';
+    textarea.style.height = (textarea.scrollHeight) + 'px';
+};
+
+window.changeServings = function(delta) {
+    const data = window.currentRecipeData;
+    if (!data) {
+        return;
+    }
+    const newVal = data.currentServings + delta;
+    if (newVal >= 1 && newVal <= 99) {
+        data.currentServings = newVal;
+        renderFullPage(document.getElementById('content-root'), data);
+    }
+};
+
+window.addNote = function(index, isPrivate) {
+    const areaId = isPrivate ? `area-priv-${index}` : `area-group-${index}`;
+    const container = document.getElementById(areaId);
+    if (!container) {
+        return;
+    }
+    container.innerHTML = renderNoteElement('', index, isPrivate);
+    const txt = container.querySelector('textarea');
+    window.autoResizeNote(txt);
+    txt.focus();
+};
+
+window.deleteNote = async function(index, isPrivate) {
+    const step = window.currentRecipeData.steps[index];
+    const gid = window.currentGroupId;
+    await fetch(`/api/notes/step/${step.id}?isPrivate=${isPrivate}${gid ? `&groupId=${gid}` : ''}`, {
+        method: 'DELETE',
+        credentials: 'include'
+    });
+    initRecipePage(new URLSearchParams(window.location.search));
+};
+
+window.toggleFavorite = async function() {
+    const data = window.currentRecipeData;
+    const isAdding = !data.isFavorite;
+    const res = await fetch(`/api/favorites/${data.id}`, {
+        method: isAdding ? 'POST' : 'DELETE',
+        credentials: 'include'
+    });
+    if (res.ok) {
+        data.isFavorite = isAdding;
+        data.favoritesCount += isAdding ? 1 : -1;
+        renderFullPage(document.getElementById('content-root'), data);
+    }
+};
+
+window.currentRecipeData = null;
+window.currentGroupId = null;
+window.currentUserId = null;
+
+const escapeHtml = window.AppUtils?.escapeHtml || ((v) => {
+    return v;
+});
+const renderIcon = (name, className = '') => {
+    return window.AppIcons?.render?.(name, className) || '';
+};
+
+export async function initRecipePage(params) {
     const root = document.getElementById('content-root');
     if (!root) {
         return;
     }
+    const recipeId = params.get('id');
+    window.currentGroupId = params.get('groupId');
+    root.innerHTML = '<div class="loader">Загрузка...</div>';
 
-    const data = DataStore.getRecipeDetails(id);
-    if (!data) {
-        root.innerHTML = '<section class="recipe-inner"><div class="page-card"><h1>Рецепт не найден</h1></div></section>';
-        return;
+    try {
+        await fetchUserInfo();
+        const recipe = await fetchRecipeData(recipeId);
+        await fetchNotesForSteps(recipe);
+        
+        window.currentRecipeData = recipe;
+        renderFullPage(root, recipe);
+    } catch (err) {
+        root.innerHTML = `<div class="page-card"><h1>Упс!</h1><p>${err.message}</p></div>`;
     }
+}
 
-    currentRecipeData = data;
+async function fetchUserInfo() {
+    const userRes = await fetch('/api/users/me', {
+        credentials: 'include'
+    });
+    if (userRes.ok) {
+        const userData = await userRes.json();
+        window.currentUserId = String(userData.id).toLowerCase();
+    }
+}
 
-    loadNotesFromStorage(data);
+async function fetchRecipeData(recipeId) {
+    const url = `/api/recipes/${recipeId}${window.currentGroupId ? `?groupId=${window.currentGroupId}` : ''}`;
+    const res = await fetch(url, {
+        credentials: 'include'
+    });
+    if (!res.ok) {
+        throw new Error('Рецепт не найден');
+    }
+    const recipe = await res.json();
+    recipe.currentServings = recipe.basePortions;
+    return recipe;
+}
 
+async function fetchNotesForSteps(recipe) {
+    for (let step of recipe.steps) {
+        const nUrl = `/api/notes/step/${step.id}${window.currentGroupId ? `?groupId=${window.currentGroupId}` : ''}`;
+        const nRes = await fetch(nUrl, {
+            credentials: 'include'
+        });
+        if (nRes.ok) {
+            const nData = await nRes.json();
+            step.myPrivateNote = nData.myPrivateNote?.text || null;
+            const gNotes = nData.groupNotes || [];
+            step.myGroupNote = gNotes.find((n) => {
+                return String(n.authorId).toLowerCase() === window.currentUserId;
+            })?.text || null;
+            step.othersGroupNotes = gNotes.filter((n) => {
+                return String(n.authorId).toLowerCase() !== window.currentUserId;
+            });
+        }
+    }
+}
+
+function renderFullPage(root, data) {
     root.innerHTML = `
         <div class="recipe-inner">
-            <div class="page-card">
-                <div class="recipe-header">
-                    <div class="recipe-header-left">
-                        <h1 class="recipe-title">${data.title}</h1>
-                        <p class="recipe-meta-author">Автор <span>${data.author}</span></p>
-                    </div>
-
-                    <button class="favorite-btn ${data.isFavorite ? 'active' : ''}" onclick="toggleFavorite()" aria-pressed="${data.isFavorite}" title="Добавить в избранное">
-                        <span class="favorite-icon" aria-hidden="true">
-                            ${renderIcon('bookmark', 'icon-bookmark recipe-bookmark-icon')}
-                        </span>
-                    </button>
-                </div>
-
-                <div class="recipe-image">
-                    <img src="${data.mainImage}" alt="${data.title}">
-                </div>
-
-                <div class="recipe-badges">
-                    <div class="recipe-badge">
-                        <span class="recipe-badge__icon" aria-hidden="true">${renderIcon('favoritesSmall', 'recipe-badge__svg')}</span>
-                        <span>${data.peopleCount} человек</span>
-                    </div>
-                    <span class="recipe-dot-divider" aria-hidden="true">${renderIcon('separator', 'recipe-dot-divider__svg')}</span>
-                    <div class="recipe-badge">
-                        <span class="recipe-badge__icon" aria-hidden="true">${renderIcon('timeCircle', 'recipe-badge__svg recipe-badge__svg--time')}</span>
-                        <span>${data.time} Мин</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="page-card">
-                <div class="ingredients-block">
-                    <div class="ingredients-header">
-                        <h2>Ингредиенты <span class="ing-count">${countTotalIngredients(data)}</span></h2>
-                        <div class="counter-rigth">
-                            <span>Порций:</span>
-                            <div class="servings-counter">
-                                <button onclick="changeServings(-1)" aria-label="Уменьшить порции">-</button>
-                                <input type="number" value="${data.currentServings}" readonly>
-                                <button onclick="changeServings(1)" aria-label="Увеличить порции">+</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="ingredients-list">
-                        ${renderIngredients(data)}
-                    </div>
-                </div>
-            </div>
-
-            <div class="page-card">
-                <!-- STEPS -->
-                <div class="steps-block">
-                    <h2 class="section-title">Как приготовить?</h2>
-                    <div class="steps-list">
-                        ${renderSteps(data)}
-                    </div>
-                </div>
-            </div>
+            ${renderHeaderCard(data).trim()}
+            ${renderIngredientsCard(data).trim()}
+            ${renderStepsCard(data).trim()}
         </div>
-    `;
-
-    syncAllNoteHeights();
-}
-
-function loadNotesFromStorage(data) {
-    const storageKey = `recipe_notes_${data.id}`;
-    const saved = localStorage.getItem(storageKey);
-    if (saved) {
-        try {
-            const notesData = JSON.parse(saved);
-            data.steps.forEach((step, index) => {
-                if (notesData[index] !== undefined) {
-                    step.note = notesData[index];
-                }
-            });
-        } catch (e) {
-            console.error('Ошибка при загрузке заметок:', e);
-        }
-    }
-}
-
-function saveNoteToStorage(recipeId, stepIndex, noteText) {
-    const storageKey = `recipe_notes_${recipeId}`;
-    const saved = localStorage.getItem(storageKey);
-    let notesData = {};
-
-    if (saved) {
-        try {
-            notesData = JSON.parse(saved);
-        } catch (e) {
-            console.error('Ошибка при чтении заметок:', e);
-        }
-    }
-
-    if (noteText === null || noteText === '') {
-        delete notesData[stepIndex];
-    } else {
-        notesData[stepIndex] = noteText;
-    }
-
-    localStorage.setItem(storageKey, JSON.stringify(notesData));
-}
-
-function countTotalIngredients(data) {
-    return data.ingredientsGroups.reduce((acc, g) => acc + g.items.length, 0);
-}
-
-function renderIngredients(data) {
-    return data.ingredientsGroups.map((group, i) => {
-        const isOpen = group.isOpen !== false;
-
-        return `
-        <div class="ing-group">
-            <div class="ing-group-header">
-                <span>${group.name}</span>
-                <button onclick="watchIng(${i})">
-                        <span aria-hidden="true" class="arrow-icon ${isOpen ? 'active' : ''}">${renderIcon('pointer', 'arrow-icon__svg')}</span>
-                </button>
-            </div>
-            <ul class="ing-items ${isOpen ? '' : 'hidden'}">
-                ${group.items.map(item => {
-            const amount = (item.count / data.baseServings) * data.currentServings;
-            return `
-                        <li>
-                            <span class="name">${item.name}</span>
-                            <span class="dots"></span>
-                            <span class="val">${parseFloat(amount.toFixed(1))} ${item.measure}</span>
-                        </li>
-                    `;
-        }).join('')}
-            </ul>
-        </div>
-    `}).join('');
-}
-
-function watchIng(index) {
-    const data = getCurrentRecipe();
-    if (!data) {
-        return;
-    }
-
-    const groups = document.querySelectorAll('.ing-group');
-    const targetGroup = groups[index];
-    if (!targetGroup) return;
-
-    const list = targetGroup.querySelector('.ing-items');
-    const arrow = targetGroup.querySelector('.arrow-icon');
-    list.classList.toggle('hidden');
-    arrow.classList.toggle('active');
-    data.ingredientsGroups[index].isOpen = !list.classList.contains('hidden');
-}
-
-function changeServings(delta) {
-    const data = getCurrentRecipe();
-    if (!data) {
-        return;
-    }
-
-    const newVal = data.currentServings + delta;
-    if (newVal >= 1 && newVal <= 20) {
-        data.currentServings = newVal;
-        initRecipePage(data.id);
-    }
-}
-
-function toggleFavorite() {
-    const data = getCurrentRecipe();
-    if (!data) {
-        return;
-    }
-
-    const nextFavorite = !data.isFavorite;
-    DataStore.setRecipeFavorite(data.id, nextFavorite);
-    data.isFavorite = nextFavorite;
-    initRecipePage(data.id);
-}
-
-/* ШАГИ */
-
-function renderSteps(data) {
-    return data.steps.map((step, i) => {
-        const hasText = !!step.text;
-        const hasMedia = !!step.media;
-
-        let layoutClass = "step-content";
-        if (hasText && hasMedia)
-            layoutClass += " grid-cols";
-        else if (!hasText && hasMedia)
-            layoutClass += " full-media";
-
-        return `
-        <div class="step-card" id="step-${i}">
-            <div class="step-card__header">
-                <h3>Шаг ${step.number}</h3>
-                <div class="note-action" id="note-action-${i}">
-                    ${renderAddNoteButton(step.note, i)}
-                </div>
-            </div>
-            <div class="${layoutClass}">
-                ${hasMedia ? `<img src="${step.media.url}" alt="Иллюстрация шага ${step.number}" class="step-img">` : ''}
-                ${hasText ? `<p class="step-text">${step.text}</p>` : ''}
-            </div>
-            <div class="note-area" id="note-area-${i}">
-                ${step.note !== null ? renderNoteElement(step.note, i) : ''}
-            </div>
-        </div>
-        `;
-    }).join('');
-}
-
-function renderAddNoteButton(note, index) {
-    if (note !== null) {
-        return '';
-    }
-
-    return `
-        <button class="add-note-btn" onclick="addNote(${index})">
-            <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
-            <span>Добавить заметку</span>
-        </button>
-    `;
-}
-
-function renderNoteElement(note, index) {
-    return `
-        <div class="note-wrapper">
-            <!-- Кнопка удаления -->
-            <button class="note-control-btn btn-delete" onclick="deleteNote(${index})" title="Удалить">
-                ${renderIcon('plus', 'icon-close note-delete-icon')}
-            </button>
-            
-            <!-- заметка -->
-            <textarea 
-                id="note-input-${index}"
-                class="note-paper"
-                placeholder="Напишите здесь вашу заметку..."
-                oninput="handleNoteInput(${index}, this)">${note && note !== 'Напишите здесь вашу заметку...' ? note : ''}
-            </textarea>
-        </div>
-    `;
-}
-
-function autoResizeNote(textarea) {
-    if (!textarea) {
-        return;
-    }
-
-    textarea.style.height = 'auto';
-    textarea.style.height = `${textarea.scrollHeight}px`;
-}
-
-function syncAllNoteHeights() {
-    document.querySelectorAll('.note-paper').forEach((textarea) => {
-        autoResizeNote(textarea);
+    `.trim();
+    document.querySelectorAll('.note-paper').forEach((t) => {
+        window.autoResizeNote(t);
     });
 }
 
-/* ИНТЕРАКТИВА С ЗАМЕТКОЙ*/
-function addNote(index) {
-    const data = getCurrentRecipe();
-    if (!data) {
-        return;
-    }
-
-    data.steps[index].note = "";
-    saveNoteToStorage(data.id, index, "");
-    const action = document.getElementById(`note-action-${index}`);
-    const area = document.getElementById(`note-area-${index}`);
-    if (action) {
-        action.innerHTML = '';
-    }
-    area.innerHTML = renderNoteElement(data.steps[index].note, index);
-    const textarea = area.querySelector('.note-paper');
-    autoResizeNote(textarea);
-    textarea.focus();
+function renderHeaderCard(data) {
+    return `
+        <div class="page-card">
+            <div class="recipe-header">
+                <div class="recipe-header-left">
+                    <h1 class="recipe-title">${escapeHtml(data.title)}</h1>
+                    <p class="recipe-meta-author">Автор <span>${escapeHtml(data.authorName)}</span></p>
+                </div>
+                <button class="favorite-btn ${data.isFavorite ? 'active' : ''}" onclick="toggleFavorite()">
+                    <span class="favorite-icon">${renderIcon('bookmark', 'recipe-bookmark-icon')}</span>
+                </button>
+            </div>
+            <div class="recipe-image"><img src="${data.mainImage || '/assets/no-photo.png'}"></div>
+            <div class="recipe-badges">
+                <div class="recipe-badge">
+                    <span class="recipe-badge__icon">${renderIcon('favoritesSmall', 'recipe-badge__svg')}</span>
+                    <span>${data.favoritesCount || 0} сохранили</span>
+                </div>
+                <span class="recipe-dot-divider">${renderIcon('separator', 'recipe-dot-divider__svg')}</span>
+                <div class="recipe-badge">
+                    <span>${data.currentServings} ${getPlural(data.currentServings, 'порция', 'порции', 'порций')}</span>
+                </div>
+                <span class="recipe-dot-divider">${renderIcon('separator', 'recipe-dot-divider__svg')}</span>
+                <div class="recipe-badge">
+                    <span class="recipe-badge__icon">${renderIcon('timeCircle', 'recipe-badge__svg')}</span>
+                    <span>${data.timeMinutes} Мин</span>
+                </div>
+            </div>
+        </div>
+    `;
 }
 
-function deleteNote(index) {
-    const data = getCurrentRecipe();
-    if (!data) {
-        return;
-    }
-
-    data.steps[index].note = null;
-    saveNoteToStorage(data.id, index, null);
-    const action = document.getElementById(`note-action-${index}`);
-    if (action) {
-        action.innerHTML = renderAddNoteButton(null, index);
-    }
-    document.getElementById(`note-area-${index}`).innerHTML = '';
-    console.log(`Заметка удалена из шага ${index + 1} `);
+function renderIngredientsCard(data) {
+    return `
+        <div class="page-card">
+            <div class="ingredients-block">
+                <div class="ingredients-header">
+                    <h2>Ингредиенты <span class="ing-count">${data.ingredients.length}</span></h2>
+                    <div class="counter-rigth">
+                        <span>Количество порций:</span>
+                        <div class="servings-counter">
+                            <button onclick="changeServings(-1)">-</button>
+                            <input type="number" value="${data.currentServings}" readonly>
+                            <button onclick="changeServings(1)">+</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="ingredients-list">
+                    ${renderIngredients(data).trim()}
+                </div>
+            </div>
+        </div>
+    `;
 }
 
-function handleNoteInput(index, textarea) {
-    const data = getCurrentRecipe();
-    if (!data) {
-        return;
-    }
-
-    autoResizeNote(textarea);
-    data.steps[index].note = textarea.value;
-    saveNoteToStorage(data.id, index, textarea.value);
-    console.log("Заметка сохранена: ", textarea.value);
+function renderStepsCard(data) {
+    return `
+        <div class="page-card">
+            <div class="steps-block">
+                <h2 class="section-title">Как приготовить?</h2>
+                <div class="steps-list">
+                    ${renderSteps(data).trim()}
+                </div>
+            </div>
+        </div>
+    `;
 }
 
-Object.assign(window, {
-    watchIng,
-    changeServings,
-    toggleFavorite,
-    addNote,
-    deleteNote,
-    handleNoteInput
-});
+function renderIngredients(data) {
+    const groups = data.ingredients.reduce((acc, item) => {
+        const name = item.section || "Состав";
+        if (!acc[name]) {
+            acc[name] = [];
+        }
+        acc[name].push(item);
+        return acc;
+    }, {});
+    return Object.entries(groups).map(([name, items]) => {
+        return `
+        <div class="ing-group">
+            <div class="ing-group-header"><span>${escapeHtml(name)}</span></div>
+            <ul class="ing-items">
+                ${items.map((item) => {
+                    const ratio = data.currentServings / data.basePortions;
+                    const amount = (item.amount * ratio).toFixed(1);
+                    return `
+                        <li>
+                            <span class="name">${escapeHtml(item.name)}</span>
+                            <span class="dots"></span>
+                            <span class="val">${parseFloat(amount)} ${escapeHtml(item.measure || '')}</span>
+                        </li>`;
+                }).join('')}
+            </ul>
+        </div>`;
+    }).join('');
+}
+
+function renderSteps(data) {
+    return data.steps.sort((a, b) => {
+        return a.sortOrder - b.sortOrder;
+    }).map((step, i) => {
+        return `
+        <div class="step-card">
+            <div class="step-card__header">
+                <h3>Шаг ${step.sortOrder}</h3>
+                <div class="note-action" style="display: flex; gap: 12px;">
+                    ${step.myPrivateNote === null ? `
+                        <button class="add-note-btn" onclick="addNote(${i}, true)">
+                            <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
+                            <span>Добавить заметку</span>
+                        </button>` : ''}
+                    ${window.currentGroupId && step.myGroupNote === null ? `
+                        <button class="add-note-btn" onclick="addNote(${i}, false)">
+                            <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
+                            <span>Добавить групповую заметку</span>
+                        </button>` : ''}
+                </div>
+            </div>
+            <div class="step-content ${step.mediaUrl ? 'grid-cols' : ''}">
+                ${step.mediaUrl ? `<img src="${step.mediaUrl}" class="step-img">` : ''}
+                <p class="step-text">${escapeHtml(step.content)}</p>
+            </div>
+            <div id="area-priv-${i}">${step.myPrivateNote !== null ? renderNoteElement(step.myPrivateNote, i, true) : ''}</div>
+            <div id="area-group-${i}">${step.myGroupNote !== null ? renderNoteElement(step.myGroupNote, i, false) : ''}</div>
+            ${window.currentGroupId && step.othersGroupNotes?.length ? `
+                <div style="margin: 20px 30px; padding: 12px; background: #f8f9fa; border-radius:12px; border:1px solid #eee;">
+                    <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold; color:#7c8a98;">Советы участников:</p>
+                    ${step.othersGroupNotes.map((n) => {
+                        return `<p style="font-size:14px; margin:4px 0;"><b>${escapeHtml(n.authorName)}:</b> ${escapeHtml(n.text)}</p>`;
+                    }).join('')}
+                </div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function renderNoteElement(note, index, isPrivate) {
+    const color = isPrivate ? '#FFF9C4' : '#E8F5E9';
+    return `
+        <div class="note-wrapper" style="background: ${color}; margin: 20px 30px;">
+            <button class="note-control-btn btn-delete" onclick="deleteNote(${index}, ${isPrivate})" title="Удалить">
+                ${renderIcon('plus', 'icon-close note-delete-icon')}
+            </button>
+            <textarea 
+                class="note-paper" 
+                style="background: ${color};"
+                placeholder="Напишите здесь..."
+                oninput="autoResizeNote(this)"
+                onblur="saveNote('${window.currentRecipeData.steps[index].id}', this.value, ${isPrivate})">${note}</textarea>
+        </div>`;
+}
