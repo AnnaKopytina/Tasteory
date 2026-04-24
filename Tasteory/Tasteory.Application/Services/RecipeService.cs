@@ -7,24 +7,28 @@ using Application.Metrics;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Enums;
+using Domain.Models;
 
 namespace Application.Services;
 
 public class RecipeService : IRecipeService
 {
     private readonly IRecipeRepository _recipeRepository;
+    private readonly IFavoriteRepository _favoriteRepository;
     private readonly IUserService _userService;
     private readonly IUserRepository _userRepository;
     private readonly IMapper _mapper;
 
-    public RecipeService(IRecipeRepository recipeRepository, IUserService userService, IUserRepository userRepository,
-        IMapper mapper)
+    public RecipeService(IRecipeRepository recipeRepository, IFavoriteRepository favoriteRepository,
+        IUserService userService, IUserRepository userRepository, IMapper mapper)
     {
         _recipeRepository = recipeRepository;
+        _favoriteRepository = favoriteRepository;
         _userService = userService;
         _userRepository = userRepository;
         _mapper = mapper;
     }
+
 
     public async Task<Guid> CreateRecipeAsync(Guid authorId, CreateRecipeRequest request)
     {
@@ -47,6 +51,7 @@ public class RecipeService : IRecipeService
 
             recipe.AddStep(step.Content, step.SortOrder, step.MediaUrl, mediaType);
         }
+
         var id = await _recipeRepository.CreateRecipeAsync(recipe);
 
         var visibility = request.IsPrivate ? "private" : "public";
@@ -55,23 +60,27 @@ public class RecipeService : IRecipeService
         return id;
     }
 
-    public async Task<RecipeResponse?> GetRecipeByIdAsync(Guid recipeId)
+    public async Task<RecipeResponse?> GetRecipeByIdAsync(Guid recipeId, Guid currentUserId)
     {
         var recipe = await _recipeRepository.GetRecipeByIdAsync(recipeId);
-
         if (recipe is null)
         {
             return null;
         }
 
         var author = await _userService.GetUserByIdAsync(recipe.AuthorId);
-        var authorName = author?.DisplayName ?? "Unknown Author";
-
+        
         var response = _mapper.Map<RecipeResponse>(recipe);
-        response.AuthorName = authorName;
+        response.AuthorName = author?.DisplayName ?? "Unknown Author";
+
+        if (currentUserId != Guid.Empty)
+        {
+            response.IsFavorite = await _favoriteRepository.IsFavoriteAsync(currentUserId, recipeId);
+        }
 
         return response;
     }
+
 
     public async Task DeleteRecipeAsync(Guid authorId, Guid recipeId)
     {
@@ -91,62 +100,17 @@ public class RecipeService : IRecipeService
     }
 
     public async Task<(List<RecipeSummaryResponse> Recipes, int TotalCount)> GetAllPublicAsync(string? searchTerm,
-        PaginationQuery query)
+        PaginationQuery query, Guid currentUserId)
     {
         var (summaries, totalCount) = await _recipeRepository.GetAllPublicAsync(searchTerm, query.Page, query.PageSize);
-
-        if (summaries.Count == 0)
-        {
-            return (new List<RecipeSummaryResponse>(), 0);
-        }
-
-        var authorIds = summaries.Select(s => s.AuthorId).Distinct().ToList();
-
-        var authorNames = await _userRepository.GetUserNamesByIdsAsync(authorIds);
-
-        var responses = summaries.Select(s => new RecipeSummaryResponse(
-            s.Id,
-            s.Title,
-            s.MainImage,
-            s.MainText,
-            s.AuthorId,
-            authorNames.GetValueOrDefault(s.AuthorId, "Unknown author"),
-            s.Rating,
-            s.IsPrivate,
-            s.TimeMinutes,
-            s.Tags.ToList()
-        )).ToList();
-
-        return (responses, totalCount);
+        return (await MapWithFavorites(summaries, currentUserId), totalCount);
     }
 
     public async Task<(List<RecipeSummaryResponse> Recipes, int TotalCount)> GetByUserIdAsync(Guid userId,
-        PaginationQuery query)
+        PaginationQuery query, Guid currentUserId)
     {
         var (summaries, totalCount) = await _recipeRepository.GetByUserIdAsync(userId, query.Page, query.PageSize);
-
-        if (summaries.Count == 0)
-        {
-            return (new List<RecipeSummaryResponse>(), 0);
-        }
-
-        var author = await _userRepository.GetByIdAsync(userId);
-        var authorName = author?.DisplayName ?? "Unknown author";
-
-        var responses = summaries.Select(s => new RecipeSummaryResponse(
-            s.Id,
-            s.Title,
-            s.MainImage,
-            s.MainText,
-            s.AuthorId,
-            authorName,
-            s.Rating,
-            s.IsPrivate,
-            s.TimeMinutes,
-            s.Tags.ToList()
-        )).ToList();
-
-        return (responses, totalCount);
+        return (await MapWithFavorites(summaries, currentUserId), totalCount);
     }
 
     public async Task<List<RecipeSuggestionResponse>> GetSuggestionsAsync(string query)
@@ -199,5 +163,45 @@ public class RecipeService : IRecipeService
         }
 
         await _recipeRepository.UpdateRecipeAsync(recipe);
+    }
+
+    public async Task<(List<RecipeSummaryResponse> Recipes, int TotalCount)> GetFavoritesByUserAsync(Guid userId,
+        PaginationQuery query)
+    {
+        var (summaries, totalCount) =
+            await _recipeRepository.GetFavoritesByUserIdAsync(userId, query.Page, query.PageSize);
+        return (await MapWithFavorites(summaries, userId), totalCount);
+    }
+
+    private async Task<List<RecipeSummaryResponse>> MapWithFavorites(List<RecipeSummary> summaries, Guid userId)
+    {
+        if (summaries.Count == 0)
+        {
+            return new List<RecipeSummaryResponse>();
+        }
+
+        var recipeIds = summaries.Select(s => s.Id).ToList();
+        var authorIds = summaries.Select(s => s.AuthorId).Distinct().ToList();
+
+        var authorNames = await _userRepository.GetUserNamesByIdsAsync(authorIds);
+
+        var favoriteIds = userId != Guid.Empty
+            ? await _favoriteRepository.GetUserFavoriteIdsAsync(userId, recipeIds)
+            : new List<Guid>();
+
+        return summaries.Select(s => new RecipeSummaryResponse(
+            s.Id,
+            s.Title,
+            s.MainImage,
+            s.MainText,
+            s.AuthorId,
+            authorNames.GetValueOrDefault(s.AuthorId, "Unknown author"),
+            s.Rating,
+            s.IsPrivate,
+            s.TimeMinutes,
+            s.Tags.ToList(),
+            favoriteIds.Contains(s.Id),
+            s.FavoritesCount
+        )).ToList();
     }
 }

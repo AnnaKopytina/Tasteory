@@ -28,4 +28,5 @@ public interface IGroupRepository
 
     public Task<bool> IsRecipeInGroupAsync(Guid groupId, Guid recipeId);
     public Task AddRecipeToGroupAsync(Guid groupId, Guid recipeId);
+    public Task<bool> HasCommonGroupAsync(Guid userId, Guid recipeId);
 }

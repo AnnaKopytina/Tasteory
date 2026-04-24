@@ -15,4 +15,6 @@ public class RecipeResponse
     public List<string> Tags { get; init; } = new();
     public List<IngredientDto> Ingredients { get; init; } = new();
     public List<StepDto> Steps { get; init; } = new();
+    public bool IsFavorite { get; set; } 
+    public int FavoritesCount { get; set; }
 }

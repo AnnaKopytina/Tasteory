@@ -13,10 +13,12 @@ namespace Tasteory.Controllers;
 public class RecipesController : ControllerBase
 {
     private readonly IRecipeService _recipeService;
+    private readonly IGroupService _groupService;
 
-    public RecipesController(IRecipeService recipeService)
+    public RecipesController(IRecipeService recipeService, IGroupService groupService)
     {
         _recipeService = recipeService;
+        _groupService = groupService;
     }
 
     [HttpPost]
@@ -30,23 +32,28 @@ public class RecipesController : ControllerBase
 
     [HttpGet("{id:guid}")]
     [AllowAnonymous]
-    public async Task<ActionResult<RecipeResponse>> GetById(Guid id)
+    public async Task<ActionResult<RecipeResponse>> GetById(Guid id, [FromQuery] Guid? groupId = null)
     {
-        var recipeResponse = await _recipeService.GetRecipeByIdAsync(id);
+        var currentUserId = User.GetUserId();
+        var recipeResponse = await _recipeService.GetRecipeByIdAsync(id, currentUserId);
 
         if (recipeResponse is null)
         {
             return NotFound();
         }
 
-        var currentUserId = User.Identity?.IsAuthenticated == true ? User.GetUserId() : Guid.Empty;
-
-        if (recipeResponse.IsPrivate && recipeResponse.AuthorId != currentUserId)
+        if (!recipeResponse.IsPrivate || recipeResponse.AuthorId == currentUserId)
         {
-            return Forbid();
+            return Ok(recipeResponse);
+        }
+        
+        var hasAccess = await _groupService.HasUserAccessToRecipeAsync(currentUserId, id);
+        if (hasAccess)
+        {
+            return Ok(recipeResponse);
         }
 
-        return Ok(recipeResponse);
+        return Forbid();
     }
 
     [HttpDelete("{id:guid}")]
@@ -69,11 +76,12 @@ public class RecipesController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetAll(
-        [FromQuery] PaginationQuery query,
+    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetAll([FromQuery] PaginationQuery query,
         [FromQuery] string? searchTerm = null)
     {
-        var (recipes, totalCount) = await _recipeService.GetAllPublicAsync(searchTerm, query);
+        var currentUserId = User.GetUserId();
+
+        var (recipes, totalCount) = await _recipeService.GetAllPublicAsync(searchTerm, query, currentUserId);
 
         return Ok(new PagedResponse<RecipeSummaryResponse>
         {
@@ -90,7 +98,9 @@ public class RecipesController : ControllerBase
         Guid userId,
         [FromQuery] PaginationQuery query)
     {
-        var (recipes, totalCount) = await _recipeService.GetByUserIdAsync(userId, query);
+        var currentUserId = User.GetUserId();
+
+        var (recipes, totalCount) = await _recipeService.GetByUserIdAsync(userId, query, currentUserId);
 
         return Ok(new PagedResponse<RecipeSummaryResponse>
         {

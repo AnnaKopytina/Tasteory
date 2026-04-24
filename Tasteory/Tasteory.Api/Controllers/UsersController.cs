@@ -12,10 +12,12 @@ namespace Tasteory.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
+    private readonly IRecipeService _recipeService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IRecipeService recipeService)
     {
         _userService = userService;
+        _recipeService = recipeService;
     }
 
     [HttpGet("me")]
@@ -80,5 +82,13 @@ public class UsersController : ControllerBase
             Page = query.Page,
             PageSize = query.PageSize
         });
+    }
+    
+    [HttpGet("me/favorites")]
+    [Authorize]
+    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetMyFavorites([FromQuery] PaginationQuery query)
+    {
+        var (recipes, totalCount) = await _recipeService.GetFavoritesByUserAsync(User.GetUserId(), query);
+        return Ok(new PagedResponse<RecipeSummaryResponse> { Items = recipes, TotalCount = totalCount, Page = query.Page, PageSize = query.PageSize });
     }
 }

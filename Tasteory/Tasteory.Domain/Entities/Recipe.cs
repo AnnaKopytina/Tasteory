@@ -14,16 +14,18 @@ public class Recipe : Entity
     public int BasePortions { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public string[] Tags { get; private set; }
+    public int FavoritesCount { get; private set; }
 
     private readonly List<Ingredient> _ingredients = new();
     public IReadOnlyCollection<Ingredient> Ingredients => _ingredients.AsReadOnly();
 
     private readonly List<Step> _steps = new();
     public IReadOnlyCollection<Step> Steps => _steps.AsReadOnly();
+    
 
     public Recipe(Guid id, Guid authorId, string title, string? mainImage, string? mainText,
         decimal rating, bool isPrivate, int timeMinutes, int basePortions,
-        DateTime createdAt, string[] tags, IEnumerable<Ingredient>? ingredients = null,
+        DateTime createdAt, string[] tags, int favoritesCount, IEnumerable<Ingredient>? ingredients = null,
         IEnumerable<Step>? steps = null) : base(id)
     {
         AuthorId = authorId;
@@ -36,6 +38,7 @@ public class Recipe : Entity
         BasePortions = basePortions;
         CreatedAt = createdAt;
         Tags = tags;
+        FavoritesCount = favoritesCount;
 
         if (ingredients is not null)
         {
@@ -69,7 +72,8 @@ public class Recipe : Entity
             timeMinutes,
             basePortions,
             DateTime.UtcNow,
-            tags);
+            tags,
+            0);
     }
 
     public void AddIngredient(string name, decimal amount, string? measure, string? section, int sortOrder)

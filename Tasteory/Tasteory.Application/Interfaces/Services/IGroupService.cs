@@ -17,7 +17,9 @@ public interface IGroupService
     public Task KickMemberAsync(Guid ownerId, Guid groupId, Guid memberToKickId);
     public Task<Group?> GetGroupByIdAsync(Guid groupId);
     public Task UpdateGroupAsync(Guid userId, Guid groupId, string newName);
-    public Task<PagedResponse<RecipeSummaryResponse>> GetGroupRecipesPagedAsync(Guid groupId, PaginationQuery query);
+    public Task<PagedResponse<RecipeSummaryResponse>> GetGroupRecipesPagedAsync(Guid groupId, PaginationQuery query,
+        Guid currentUserId);
     public Task AddRecipeToGroupAsync(Guid userId, Guid groupId, Guid recipeId);
     public Task AddMemberByUsernameAsync(Guid currentUserId, Guid groupId, string userName);
+    public Task<bool> HasUserAccessToRecipeAsync(Guid userId, Guid recipeId);
 }

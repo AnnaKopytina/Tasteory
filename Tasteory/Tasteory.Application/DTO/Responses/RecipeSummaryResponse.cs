@@ -10,5 +10,7 @@ public record RecipeSummaryResponse(
     decimal Rating,
     bool IsPrivate,
     int TimeMinutes,
-    List<string> Tags
+    List<string> Tags,
+    bool IsFavorite,
+    int FavoritesCount
 );

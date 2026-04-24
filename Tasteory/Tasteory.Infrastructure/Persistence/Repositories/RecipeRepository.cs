@@ -39,6 +39,7 @@ public class RecipeRepository : IRecipeRepository
             .AsNoTracking()
             .Include(r => r.Steps)
             .Include(r => r.Ingredients)
+            .Include(r => r.FavoritedBy)
             .FirstOrDefaultAsync(r => r.Id == id);
 
         return entity is null ? null : _mapper.Map<Recipe>(entity);
@@ -141,5 +142,24 @@ public class RecipeRepository : IRecipeRepository
         _context.AddRange(newSteps);
 
         await _context.SaveChangesAsync();
+    }
+    
+    public async Task<(List<RecipeSummary> Items, int TotalCount)> GetFavoritesByUserIdAsync(Guid userId, int page, int pageSize)
+    {
+        var query = _context.UserFavoriteRecipes
+            .AsNoTracking()
+            .Where(f => f.UserId == userId)
+            .OrderByDescending(f => f.CreatedAt)
+            .Select(f => f.Recipe);
+
+        var totalCount = await query.CountAsync();
+        
+        var items = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ProjectTo<RecipeSummary>(_mapper.ConfigurationProvider)
+            .ToListAsync();
+
+        return (items, totalCount);
     }
 }

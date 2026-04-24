@@ -198,4 +198,11 @@ public class GroupRepository : IGroupRepository
 
         await _context.SaveChangesAsync();
     }
+    
+    public async Task<bool> HasCommonGroupAsync(Guid userId, Guid recipeId)
+    {
+        return await _context.UserGroups
+            .Where(ug => ug.UserId == userId)
+            .AnyAsync(ug => _context.GroupRecipes.Any(gr => gr.GroupId == ug.GroupId && gr.RecipeId == recipeId));
+    }
 }

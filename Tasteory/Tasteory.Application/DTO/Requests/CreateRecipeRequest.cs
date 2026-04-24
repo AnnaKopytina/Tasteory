@@ -7,7 +7,7 @@ public record CreateRecipeRequest(
     bool IsPrivate,
     int TimeMinutes,
     int BasePortions,
-    string[] Tags,
-    List<IngredientDto> Ingredients,
-    List<StepDto> Steps
+    string[]? Tags, 
+    List<IngredientDto>? Ingredients,
+    List<StepDto>? Steps
 );

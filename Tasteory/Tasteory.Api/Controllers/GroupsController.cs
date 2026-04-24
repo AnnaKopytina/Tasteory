@@ -126,10 +126,12 @@ public class GroupsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/recipes")]
-    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetGroupRecipes(Guid id,
-        [FromQuery] PaginationQuery query)
+    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetGroupRecipes(Guid id, [FromQuery] PaginationQuery query)
     {
-        var result = await _groupService.GetGroupRecipesPagedAsync(id, query);
+        var currentUserId = User.GetUserId();
+        
+        var result = await _groupService.GetGroupRecipesPagedAsync(id, query, currentUserId);
+        
         return Ok(result);
     }
 

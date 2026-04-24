@@ -21,7 +21,8 @@ public class RecipeProfile : Profile
             .ForCtorParam("createdAt", opt => opt.MapFrom(src => src.CreatedAt))
             .ForCtorParam("tags", opt => opt.MapFrom(src => src.Tags))
             .ForCtorParam("ingredients", opt => opt.MapFrom(src => src.Ingredients))
-            .ForCtorParam("steps", opt => opt.MapFrom(src => src.Steps));
+            .ForCtorParam("steps", opt => opt.MapFrom(src => src.Steps))
+            .ForCtorParam("favoritesCount", opt => opt.MapFrom(src => src.FavoritedBy.Count));
         
         CreateMap<Recipe, RecipeEntity>()
             .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
@@ -40,6 +41,7 @@ public class RecipeProfile : Profile
         CreateMap<Ingredient, IngredientEntity>();
         CreateMap<Step, StepEntity>();
 
-        CreateMap<RecipeEntity, RecipeSummary>();
+        CreateMap<RecipeEntity, RecipeSummary>()
+            .ForMember(dest => dest.FavoritesCount, opt => opt.MapFrom(src => src.FavoritedBy.Count));
     }
 }

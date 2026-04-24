@@ -2,6 +2,7 @@ using Application.DTO.Requests;
 using Application.DTO.Responses;
 using Application.Interfaces.Services;
 using Infrastructure.Auth;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -47,5 +48,12 @@ public class AuthController : ControllerBase
     {
         Response.Cookies.Delete(_jwtOptions.CookieName);
         return NoContent();
+    }
+    
+    [HttpGet("status")]
+    [Authorize]
+    public IActionResult CheckStatus()
+    {
+        return Ok();
     }
 }

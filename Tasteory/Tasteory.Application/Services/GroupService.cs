@@ -15,13 +15,15 @@ public class GroupService : IGroupService
     private readonly IGroupRepository _groupRepository;
     private readonly IUserRepository _userRepository;
     private readonly IRecipeRepository _recipeRepository;
+    private readonly IFavoriteRepository _favoriteRepository;
 
     public GroupService(IGroupRepository groupRepository, IUserRepository userRepository,
-        IRecipeRepository recipeRepository)
+        IRecipeRepository recipeRepository, IFavoriteRepository favoriteRepository)
     {
         _groupRepository = groupRepository;
         _userRepository = userRepository;
         _recipeRepository = recipeRepository;
+        _favoriteRepository = favoriteRepository;
     }
 
     public async Task<Guid> CreateGroupAsync(Guid userId, string name)
@@ -33,13 +35,6 @@ public class GroupService : IGroupService
 
     public async Task<string> GenerateInviteCodeAsync(Guid userId, Guid groupId)
     {
-        var role = await _groupRepository.GetUserRoleInGroupAsync(userId, groupId);
-
-        if (role != GroupRole.Owner)
-        {
-            throw new ForbiddenException("Only the group owner can generate invite codes.");
-        }
-
         var existingInvite = await _groupRepository.GetActiveInviteAsync(groupId);
 
         if (existingInvite is not null)
@@ -153,8 +148,10 @@ public class GroupService : IGroupService
         await _groupRepository.UpdateGroupNameAsync(groupId, newName);
     }
 
-    public async Task<PagedResponse<RecipeSummaryResponse>> GetGroupRecipesPagedAsync(Guid groupId,
-        PaginationQuery query)
+    public async Task<PagedResponse<RecipeSummaryResponse>> GetGroupRecipesPagedAsync(
+        Guid groupId,
+        PaginationQuery query,
+        Guid currentUserId)
     {
         var (summaries, totalCount) =
             await _groupRepository.GetGroupRecipesPagedAsync(groupId, query.Page, query.PageSize);
@@ -163,15 +160,16 @@ public class GroupService : IGroupService
         {
             return new PagedResponse<RecipeSummaryResponse>
             {
-                Items = new List<RecipeSummaryResponse>(),
-                TotalCount = 0,
-                Page = query.Page,
-                PageSize = query.PageSize
             };
         }
 
+        var recipeIds = summaries.Select(s => s.Id).ToList();
         var authorIds = summaries.Select(s => s.AuthorId).Distinct().ToList();
         var authorNames = await _userRepository.GetUserNamesByIdsAsync(authorIds);
+
+        var favoriteIds = currentUserId != Guid.Empty
+            ? await _favoriteRepository.GetUserFavoriteIdsAsync(currentUserId, recipeIds)
+            : new List<Guid>();
 
         var responses = summaries.Select(s => new RecipeSummaryResponse(
             s.Id,
@@ -183,7 +181,9 @@ public class GroupService : IGroupService
             s.Rating,
             s.IsPrivate,
             s.TimeMinutes,
-            s.Tags.ToList()
+            s.Tags.ToList(),
+            favoriteIds.Contains(s.Id),
+            s.FavoritesCount
         )).ToList();
 
         return new PagedResponse<RecipeSummaryResponse>
@@ -198,7 +198,7 @@ public class GroupService : IGroupService
     public async Task AddRecipeToGroupAsync(Guid userId, Guid groupId, Guid recipeId)
     {
         var role = await _groupRepository.GetUserRoleInGroupAsync(userId, groupId);
-        
+
         if (role is null)
         {
             throw new NotFoundException("You are not a member of this group.");
@@ -216,7 +216,7 @@ public class GroupService : IGroupService
         }
 
         var alreadyInGroup = await _groupRepository.IsRecipeInGroupAsync(groupId, recipeId);
-        
+
         if (alreadyInGroup)
         {
             throw new AlreadyExistsException("Recipe is already in this group.");
@@ -224,7 +224,7 @@ public class GroupService : IGroupService
 
         await _groupRepository.AddRecipeToGroupAsync(groupId, recipeId);
     }
-    
+
     public async Task AddMemberByUsernameAsync(Guid currentUserId, Guid groupId, string userName)
     {
         var role = await _groupRepository.GetUserRoleInGroupAsync(currentUserId, groupId);
@@ -236,7 +236,7 @@ public class GroupService : IGroupService
         }
 
         var targetUser = await _userRepository.GetByUsernameAsync(cleanUsername);
-        
+
         if (targetUser is null)
         {
             throw new NotFoundException($"User @{cleanUsername} not found.");
@@ -246,14 +246,24 @@ public class GroupService : IGroupService
         {
             throw new BadRequestException("You cannot add yourself to the group.");
         }
-        
+
         var isMember = await _groupRepository.IsUserInGroupAsync(targetUser.Id, groupId);
-        
+
         if (isMember)
         {
             throw new AlreadyExistsException("User is already a member of this group.");
         }
 
         await _groupRepository.AddUserToGroupAsync(targetUser.Id, groupId, GroupRole.Member);
+    }
+    
+    public async Task<bool> HasUserAccessToRecipeAsync(Guid userId, Guid recipeId)
+    {
+        if (userId == Guid.Empty)
+        {
+            return false;
+        }
+        
+        return await _groupRepository.HasCommonGroupAsync(userId, recipeId);
     }
 }
