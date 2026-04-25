@@ -61,12 +61,17 @@ window.changeServings = function(delta) {
     }
 };
 
-window.addNote = function(index, isPrivate) {
-    const areaId = isPrivate ? `area-priv-${index}` : `area-group-${index}`;
-    const container = document.getElementById(areaId);
-    if (!container) {
+window.addNote = async function(index, isPrivate) {
+    const isAuth = await window.AppRouter.isAuthorized();
+    if (!isAuth) {
+        alert("Чтобы добавлять свои секретные заметки к шагам, нужно войти в аккаунт!");
         return;
     }
+
+    const areaId = isPrivate ? `area-priv-${index}` : `area-group-${index}`;
+    const container = document.getElementById(areaId);
+    if (!container) return;
+
     container.innerHTML = renderNoteElement('', index, isPrivate);
     const txt = container.querySelector('textarea');
     window.autoResizeNote(txt);
@@ -192,6 +197,13 @@ function renderFullPage(root, data) {
 }
 
 function renderHeaderCard(data) {
+    const isAuthor = String(data.authorId).toLowerCase() === String(window.currentUserId).toLowerCase();
+
+
+    const imageHtml = data.mainImage
+        ? `<div class="recipe-image"><img src="${data.mainImage}"></div>`
+        : '';
+
     return `
         <div class="page-card">
             <div class="recipe-header">
@@ -199,11 +211,21 @@ function renderHeaderCard(data) {
                     <h1 class="recipe-title">${escapeHtml(data.title)}</h1>
                     <p class="recipe-meta-author">Автор <span>${escapeHtml(data.authorName)}</span></p>
                 </div>
-                <button class="favorite-btn ${data.isFavorite ? 'active' : ''}" onclick="toggleFavorite()">
-                    <span class="favorite-icon">${renderIcon('bookmark', 'recipe-bookmark-icon')}</span>
-                </button>
+                <div style="display: flex; gap: 12px; align-items: center;">
+                    ${isAuthor ? `
+                        <button class="favorite-btn" 
+                                style="background: none; padding: 0; width: 24px; height: 32px;" 
+                                onclick="window.AppRouter.navigate('/create?editId=${data.id}')" 
+                                title="Редактировать">
+                            ${window.AppIcons?.render?.('edit', 'recipe-bookmark-icon')}
+                        </button>
+                    ` : ''}
+                    <button class="favorite-btn ${data.isFavorite ? 'active' : ''}" onclick="toggleFavorite()">
+                        <span class="favorite-icon">${window.AppIcons?.render?.('bookmark', 'recipe-bookmark-icon')}</span>
+                    </button>
+                </div>
             </div>
-            <div class="recipe-image"><img src="${data.mainImage || '/assets/no-photo.png'}"></div>
+            ${imageHtml} 
             <div class="recipe-badges">
                 <div class="recipe-badge">
                     <span class="recipe-badge__icon">${renderIcon('favoritesSmall', 'recipe-badge__svg')}</span>
@@ -289,20 +311,24 @@ function renderIngredients(data) {
 }
 
 function renderSteps(data) {
-    return data.steps.sort((a, b) => {
-        return a.sortOrder - b.sortOrder;
-    }).map((step, i) => {
+    return data.steps.sort((a, b) => a.sortOrder - b.sortOrder).map((step, i) => {
+        const privNoteText = step.myPrivateNote || '';
+        const groupNoteText = step.myGroupNote || '';
+
+        const showPrivBtn = !step.myPrivateNote;
+        const showGroupBtn = window.currentGroupId && !step.myGroupNote;
+
         return `
         <div class="step-card">
             <div class="step-card__header">
                 <h3>Шаг ${step.sortOrder}</h3>
                 <div class="note-action" style="display: flex; gap: 12px;">
-                    ${step.myPrivateNote === null ? `
+                    ${showPrivBtn ? `
                         <button class="add-note-btn" onclick="addNote(${i}, true)">
                             <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
                             <span>Добавить заметку</span>
                         </button>` : ''}
-                    ${window.currentGroupId && step.myGroupNote === null ? `
+                    ${showGroupBtn ? `
                         <button class="add-note-btn" onclick="addNote(${i}, false)">
                             <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
                             <span>Добавить групповую заметку</span>
@@ -313,14 +339,15 @@ function renderSteps(data) {
                 ${step.mediaUrl ? `<img src="${step.mediaUrl}" class="step-img">` : ''}
                 <p class="step-text">${escapeHtml(step.content)}</p>
             </div>
-            <div id="area-priv-${i}">${step.myPrivateNote !== null ? renderNoteElement(step.myPrivateNote, i, true) : ''}</div>
-            <div id="area-group-${i}">${step.myGroupNote !== null ? renderNoteElement(step.myGroupNote, i, false) : ''}</div>
+            <div id="area-priv-${i}">${step.myPrivateNote ? renderNoteElement(privNoteText, i, true) : ''}</div>
+            <div id="area-group-${i}">${step.myGroupNote ? renderNoteElement(groupNoteText, i, false) : ''}</div>
+            
             ${window.currentGroupId && step.othersGroupNotes?.length ? `
                 <div style="margin: 20px 30px; padding: 12px; background: #f8f9fa; border-radius:12px; border:1px solid #eee;">
                     <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold; color:#7c8a98;">Советы участников:</p>
-                    ${step.othersGroupNotes.map((n) => {
-                        return `<p style="font-size:14px; margin:4px 0;"><b>${escapeHtml(n.authorName)}:</b> ${escapeHtml(n.text)}</p>`;
-                    }).join('')}
+                    ${step.othersGroupNotes.map((n) => `
+                        <p style="font-size:14px; margin:4px 0;"><b>${escapeHtml(n.authorName)}:</b> ${escapeHtml(n.text)}</p>
+                    `).join('')}
                 </div>` : ''}
         </div>`;
     }).join('');

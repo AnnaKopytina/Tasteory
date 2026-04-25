@@ -193,7 +193,7 @@
         e.preventDefault(); e.stopPropagation();
         window.GroupCreateModal?.open({ onCreated: () => loadAndRenderGroups().catch(console.error) });
     });
-    
+
     window.addEventListener('auth:changed', updateSidebarUI);
     updateSidebarUI();
 })();

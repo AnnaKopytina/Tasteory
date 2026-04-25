@@ -108,6 +108,7 @@
 	align-items: center;
 	justify-content: center;
 	width: 100%;
+	margin: 5px;
 	border: none;
 	border-radius: var(--create-radius-sm);
 	min-height: 40px;
@@ -296,4 +297,31 @@
 	min-height: 20px;
 	color: var(--create-dark);
 	font-size: 15px;
+}
+
+.create-btn--danger {
+	background-color: #ee7e37 !important;
+	color: white !important;
+	margin-top: 10px;
+}
+
+.create-btn--danger:hover {
+	background-color: #d66a2a !important;
+}
+
+.create-file-name {
+	font-size: 14px;
+	color: #7c8a98;
+	font-style: italic;
+}
+
+.is-hidden {
+	display: none !important;
+}
+
+.create-image-actions {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	margin: 5px;
 }

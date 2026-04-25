@@ -148,20 +148,24 @@ async function renderRecipesTab(container) {
         credentials: 'include'
     });
     const data = await res.json();
+
+    container.innerHTML = `
+        <div class="profile-recipes-actions" style="margin-bottom: 20px;">
+            <button type="button" class="profile-create-group-btn" onclick="window.AppRouter.navigate('/create')">➕ Создать рецепт</button>
+        </div>
+        <div class="profile-cards-grid"></div>
+    `;
+
     if (!data.items?.length) {
-        container.innerHTML = '<div class="profile-empty">Тут пока пусто</div>';
+        container.querySelector('.profile-cards-grid').innerHTML = '<div class="profile-empty">Тут пока пусто, время что-нибудь приготовить!</div>';
     } else {
-        container.innerHTML = '<div class="profile-cards-grid"></div>';
-        const recipes = data.items.map((r) => {
-            return {
-                ...r,
-                image: r.mainImage,
-                time: r.timeMinutes,
-                author: r.authorName,
-                isFavorite: r.isFavorite,
-                favoritesCount: r.favoritesCount
-            };
-        });
+        const recipes = data.items.map(r => ({
+            ...r,
+            image: r.mainImage,
+            time: r.timeMinutes,
+            author: r.authorName,
+            isFavorite: r.isFavorite
+        }));
         RecipeCard.renderRecipeCards(recipes, container.querySelector('.profile-cards-grid'));
     }
 }

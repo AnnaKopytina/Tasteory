@@ -34,34 +34,58 @@
     object-fit: cover;
 }
 
-.recipe-card__favorite {
+
+
+
+.recipe-card__actions {
     position: absolute;
     top: 14px;
     right: 14px;
+    display: flex;
+    gap: 8px; /* Расстояние между кнопками */
+    align-items: center;
+    z-index: 2;
+}
+
+/* Общий стиль для кнопок на карточке (Изменить и Избранное) */
+.recipe-card__btn {
     border: none;
-    background: transparent;
+    background: rgba(20, 47, 61, 0.01); /* Темная подложка для видимости на светлых фото */
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
+    width: 32px;  /* Унифицированный размер */
+    height: 32px;
+    border-radius: 8px;
     color: #fefefe;
-    transition: transform 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
-.recipe-card__favorite:hover {
+.recipe-card__btn:hover {
     transform: scale(1.1);
 }
 
-.recipe-card__favorite--active {
-    color: #fefefe;
+.recipe-card__edit .recipe-card__icon {
+    width: 20px;
+    height: 20px;
 }
 
 .recipe-card__favorite-icon {
-    width: 19px;
-    height: 24px;
+    width: 16px;
+    height: 20px;
     display: inline-flex;
 }
+
+.recipe-card__favorite--active {
+    background: rgba(250, 134, 1, 0.85); /* Оранжевый фон при активации (опционально) */
+}
+
+.recipe-card__favorite {
+    position: static;
+}
+
 
 .recipe-card__content {
     display: flex;

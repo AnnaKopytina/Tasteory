@@ -26,6 +26,14 @@ export async function initGroupPage(groupId) {
     try {
         const { userData, groupData, members } = await fetchGroupPageData(groupId);
 
+        const currentUserId = userData ? String(userData.id).toLowerCase() : null;
+        const isMember = members.some(m => String(m.id).toLowerCase() === currentUserId);
+
+        if (!isMember) {
+            renderError(root, "Вы не являетесь участником этой группы. Попросите владельца прислать вам код приглашения.");
+            return;
+        }
+
         initializeGroupState(userData, groupData, members);
 
         renderLayout(root);

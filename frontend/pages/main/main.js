@@ -7,7 +7,20 @@ const mainState = {
     allRecipes: []
 };
 
+async function ensureUserContext() {
+    if (window.currentUserId) return;
+    try {
+        const res = await fetch('/api/users/me', { credentials: 'include' });
+        if (res.ok) {
+            const user = await res.json();
+            window.currentUserId = user.id;
+            localStorage.setItem('userId', user.id);
+        }
+    } catch (e) {}
+}
+
 export async function initMainPage() {
+    await ensureUserContext();
     const root = document.getElementById('content-root');
     if (!root) {
         return;

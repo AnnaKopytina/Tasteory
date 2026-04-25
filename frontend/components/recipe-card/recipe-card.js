@@ -34,18 +34,33 @@ export class RecipeCard {
     }
 
     renderImageSection(image, favActive) {
+        const currentId = window.currentUserId || localStorage.getItem('userId');
+        const isAuthor = currentId && String(this.recipe.authorId).toLowerCase() === String(currentId).toLowerCase();
+
         return `
-            <div class="recipe-card__image-wrapper">
-                <img src="${image || '/assets/no-photo.png'}" class="recipe-card__image">
+        <div class="recipe-card__image-wrapper">
+            <img src="${image || '/components/recipe-card/no-photo.png'}" class="recipe-card__image">
+            
+            <div class="recipe-card__actions">
+                ${isAuthor ? `
+                    <button type="button" 
+                            class="recipe-card__btn recipe-card__edit" 
+                            title="Редактировать"
+                            onclick="event.preventDefault(); event.stopPropagation(); window.AppRouter.navigate('/create?editId=${this.recipe.id}')">
+                        ${renderIcon('edit', 'recipe-card__icon')}
+                    </button>
+                ` : ''}
+                
                 <button type="button" 
-                        class="recipe-card__favorite ${favActive}" 
+                        class="recipe-card__btn recipe-card__favorite ${favActive}" 
                         data-action="toggle-favorite">
                     <span class="recipe-card__favorite-icon">
                         ${renderIcon('bookmark', 'recipe-card__icon recipe-card__icon--bookmark')}
                     </span>
                 </button>
             </div>
-        `;
+        </div>
+    `;
     }
 
     renderContentSection(title, favoritesCount, time, author) {
@@ -88,6 +103,12 @@ export class RecipeCard {
         e.preventDefault();
         e.stopPropagation();
 
+        const isAuth = await window.AppRouter.isAuthorized();
+        if (!isAuth) {
+            alert("Чтобы сохранять рецепты в избранное, нужно войти в аккаунт!");
+            return;
+        }
+
         const isAdding = !this.recipe.isFavorite;
         const method = isAdding ? 'POST' : 'DELETE';
 
@@ -101,9 +122,12 @@ export class RecipeCard {
                 this.updateFavoriteState(isAdding);
                 this.updateFavoriteUI(favoriteBtn, countSpan, isAdding);
                 this.onFavoriteClick(this.recipe);
+            } else if (res.status === 401) {
+                alert("Сессия истекла. Пожалуйста, войдите снова.");
+                window.AppRouter.navigate('/auth');
             }
         } catch (err) {
-            console.error(err);
+            console.error('Ошибка при смене статуса избранного:', err);
         }
     }
 
