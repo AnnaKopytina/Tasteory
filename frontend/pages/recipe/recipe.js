@@ -1,3 +1,5 @@
+import { RECIPE_FILTERS } from '../../core/recipe-filters.js';
+
 function getPlural(n, one, few, many) {
     let res = n % 10;
     if (n % 100 > 10 && n % 100 < 20) {
@@ -70,7 +72,9 @@ window.addNote = async function(index, isPrivate) {
 
     const areaId = isPrivate ? `area-priv-${index}` : `area-group-${index}`;
     const container = document.getElementById(areaId);
-    if (!container) return;
+    if (!container) {
+        return;
+    }
 
     container.innerHTML = renderNoteElement('', index, isPrivate);
     const txt = container.querySelector('textarea');
@@ -115,6 +119,7 @@ window.currentUserId = null;
 const escapeHtml = window.AppUtils?.escapeHtml || ((v) => {
     return v;
 });
+
 const renderIcon = (name, className = '') => {
     return window.AppIcons?.render?.(name, className) || '';
 };
@@ -165,21 +170,25 @@ async function fetchRecipeData(recipeId) {
 
 async function fetchNotesForSteps(recipe) {
     for (let step of recipe.steps) {
-        const nUrl = `/api/notes/step/${step.id}${window.currentGroupId ? `?groupId=${window.currentGroupId}` : ''}`;
-        const nRes = await fetch(nUrl, {
-            credentials: 'include'
+        await fetchSingleStepNotes(step);
+    }
+}
+
+async function fetchSingleStepNotes(step) {
+    const nUrl = `/api/notes/step/${step.id}${window.currentGroupId ? `?groupId=${window.currentGroupId}` : ''}`;
+    const nRes = await fetch(nUrl, {
+        credentials: 'include'
+    });
+    if (nRes.ok) {
+        const nData = await nRes.json();
+        step.myPrivateNote = nData.myPrivateNote?.text || null;
+        const gNotes = nData.groupNotes || [];
+        step.myGroupNote = gNotes.find((n) => {
+            return String(n.authorId).toLowerCase() === window.currentUserId;
+        })?.text || null;
+        step.othersGroupNotes = gNotes.filter((n) => {
+            return String(n.authorId).toLowerCase() !== window.currentUserId;
         });
-        if (nRes.ok) {
-            const nData = await nRes.json();
-            step.myPrivateNote = nData.myPrivateNote?.text || null;
-            const gNotes = nData.groupNotes || [];
-            step.myGroupNote = gNotes.find((n) => {
-                return String(n.authorId).toLowerCase() === window.currentUserId;
-            })?.text || null;
-            step.othersGroupNotes = gNotes.filter((n) => {
-                return String(n.authorId).toLowerCase() !== window.currentUserId;
-            });
-        }
     }
 }
 
@@ -191,18 +200,37 @@ function renderFullPage(root, data) {
             ${renderStepsCard(data).trim()}
         </div>
     `.trim();
+    
+    initializeNoteAutoResize();
+}
+
+function initializeNoteAutoResize() {
     document.querySelectorAll('.note-paper').forEach((t) => {
         window.autoResizeNote(t);
     });
 }
 
+function renderTagsList(tags) {
+    return (tags || [])
+        .filter(tagId => {
+            return tagId.toLowerCase() !== "общее";
+        })
+        .map(tagId => {
+            const filter = RECIPE_FILTERS.find(f => {
+                return f.id === tagId.toLowerCase();
+            });
+            const label = filter ? filter.label : tagId;
+            return `<span style="background: #e9eef2; color: #102e3f; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">${escapeHtml(label)}</span>`;
+        }).join('');
+}
+
 function renderHeaderCard(data) {
     const isAuthor = String(data.authorId).toLowerCase() === String(window.currentUserId).toLowerCase();
-
-
     const imageHtml = data.mainImage
         ? `<div class="recipe-image"><img src="${data.mainImage}"></div>`
         : '';
+
+    const tagsHtml = renderTagsList(data.tags);
 
     return `
         <div class="page-card">
@@ -226,7 +254,7 @@ function renderHeaderCard(data) {
                 </div>
             </div>
             ${imageHtml} 
-            <div class="recipe-badges">
+            <div class="recipe-badges" style="margin-bottom: ${tagsHtml ? '15px' : '0'};">
                 <div class="recipe-badge">
                     <span class="recipe-badge__icon">${renderIcon('favoritesSmall', 'recipe-badge__svg')}</span>
                     <span>${data.favoritesCount || 0} сохранили</span>
@@ -241,6 +269,12 @@ function renderHeaderCard(data) {
                     <span>${data.timeMinutes} Мин</span>
                 </div>
             </div>
+
+            ${tagsHtml ? `
+                <div class="recipe-tags" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                    ${tagsHtml}
+                </div>
+            ` : ''}
         </div>
     `;
 }
@@ -311,46 +345,53 @@ function renderIngredients(data) {
 }
 
 function renderSteps(data) {
-    return data.steps.sort((a, b) => a.sortOrder - b.sortOrder).map((step, i) => {
-        const privNoteText = step.myPrivateNote || '';
-        const groupNoteText = step.myGroupNote || '';
+    return data.steps
+        .sort((a, b) => {
+            return a.sortOrder - b.sortOrder;
+        })
+        .map((step, i) => {
+            return renderSingleStep(step, i);
+        }).join('');
+}
 
-        const showPrivBtn = !step.myPrivateNote;
-        const showGroupBtn = window.currentGroupId && !step.myGroupNote;
+function renderSingleStep(step, i) {
+    const privNoteText = step.myPrivateNote || '';
+    const groupNoteText = step.myGroupNote || '';
+    const showPrivBtn = !step.myPrivateNote;
+    const showGroupBtn = window.currentGroupId && !step.myGroupNote;
 
-        return `
-        <div class="step-card">
-            <div class="step-card__header">
-                <h3>Шаг ${step.sortOrder}</h3>
-                <div class="note-action" style="display: flex; gap: 12px;">
-                    ${showPrivBtn ? `
-                        <button class="add-note-btn" onclick="addNote(${i}, true)">
-                            <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
-                            <span>Добавить заметку</span>
-                        </button>` : ''}
-                    ${showGroupBtn ? `
-                        <button class="add-note-btn" onclick="addNote(${i}, false)">
-                            <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
-                            <span>Добавить групповую заметку</span>
-                        </button>` : ''}
-                </div>
+    return `
+    <div class="step-card">
+        <div class="step-card__header">
+            <h3>Шаг ${step.sortOrder}</h3>
+            <div class="note-action" style="display: flex; gap: 12px;">
+                ${showPrivBtn ? `
+                    <button class="add-note-btn" onclick="addNote(${i}, true)">
+                        <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
+                        <span>Добавить заметку</span>
+                    </button>` : ''}
+                ${showGroupBtn ? `
+                    <button class="add-note-btn" onclick="addNote(${i}, false)">
+                        <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
+                        <span>Добавить групповую заметку</span>
+                    </button>` : ''}
             </div>
-            <div class="step-content ${step.mediaUrl ? 'grid-cols' : ''}">
-                ${step.mediaUrl ? `<img src="${step.mediaUrl}" class="step-img">` : ''}
-                <p class="step-text">${escapeHtml(step.content)}</p>
-            </div>
-            <div id="area-priv-${i}">${step.myPrivateNote ? renderNoteElement(privNoteText, i, true) : ''}</div>
-            <div id="area-group-${i}">${step.myGroupNote ? renderNoteElement(groupNoteText, i, false) : ''}</div>
-            
-            ${window.currentGroupId && step.othersGroupNotes?.length ? `
-                <div style="margin: 20px 30px; padding: 12px; background: #f8f9fa; border-radius:12px; border:1px solid #eee;">
-                    <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold; color:#7c8a98;">Советы участников:</p>
-                    ${step.othersGroupNotes.map((n) => `
-                        <p style="font-size:14px; margin:4px 0;"><b>${escapeHtml(n.authorName)}:</b> ${escapeHtml(n.text)}</p>
-                    `).join('')}
-                </div>` : ''}
-        </div>`;
-    }).join('');
+        </div>
+        <div class="step-content ${step.mediaUrl ? 'grid-cols' : ''}">
+            ${step.mediaUrl ? `<img src="${step.mediaUrl}" class="step-img">` : ''}
+            <p class="step-text">${escapeHtml(step.content)}</p>
+        </div>
+        <div id="area-priv-${i}">${step.myPrivateNote ? renderNoteElement(privNoteText, i, true) : ''}</div>
+        <div id="area-group-${i}">${step.myGroupNote ? renderNoteElement(groupNoteText, i, false) : ''}</div>
+        
+        ${window.currentGroupId && step.othersGroupNotes?.length ? `
+            <div style="margin: 20px 30px; padding: 12px; background: #f8f9fa; border-radius:12px; border:1px solid #eee;">
+                <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold; color:#7c8a98;">Советы участников:</p>
+                ${step.othersGroupNotes.map((n) => `
+                    <p style="font-size:14px; margin:4px 0;"><b>${escapeHtml(n.authorName)}:</b> ${escapeHtml(n.text)}</p>
+                `).join('')}
+            </div>` : ''}
+    </div>`;
 }
 
 function renderNoteElement(note, index, isPrivate) {

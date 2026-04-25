@@ -1,7 +1,13 @@
+import { RECIPE_FILTERS } from '../../core/recipe-filters.js';
+
 const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 
+let selectedTags = new Set();
+
 async function uploadMedia(file) {
-    if (!file) return null;
+    if (!file) {
+        return null;
+    }
     const formData = new FormData();
     formData.append('file', file);
     const res = await fetch('/api/media/upload', {
@@ -9,28 +15,39 @@ async function uploadMedia(file) {
         body: formData,
         credentials: 'include'
     });
-    if (!res.ok) throw new Error('Ошибка загрузки фото');
+    if (!res.ok) {
+        throw new Error('Ошибка загрузки фото');
+    }
     const data = await res.json();
     return data.url || data.path;
 }
-
 
 function renderDeleteIcon() {
     return window.AppIcons?.render?.('delete', 'icon-btn__icon') || '🗑';
 }
 
 function updateImageStatusUI(container, hasImage) {
-    if (!container) return;
+    if (!container) {
+        return;
+    }
     const uploadBtn = container.querySelector('[data-action*="upload-"]');
     const deleteBtn = container.querySelector('[data-action*="clear-"]');
-    const statusSpan = container.closest('.create-step__media').querySelector('.create-file-name');
+    const statusSpan = container.closest('.create-step__media')?.querySelector('.create-file-name');
 
     if (hasImage) {
-        if (uploadBtn) uploadBtn.textContent = "Изменить фото";
-        if (deleteBtn) deleteBtn.classList.remove('is-hidden');
+        if (uploadBtn) {
+            uploadBtn.textContent = "Изменить фото";
+        }
+        if (deleteBtn) {
+            deleteBtn.classList.remove('is-hidden');
+        }
     } else {
-        if (uploadBtn) uploadBtn.textContent = "Загрузить фото";
-        if (deleteBtn) deleteBtn.classList.add('is-hidden');
+        if (uploadBtn) {
+            uploadBtn.textContent = "Загрузить фото";
+        }
+        if (deleteBtn) {
+            deleteBtn.classList.add('is-hidden');
+        }
         if (statusSpan) {
             statusSpan.textContent = "Нет фото";
             statusSpan.dataset.currentUrl = "";
@@ -38,7 +55,18 @@ function updateImageStatusUI(container, hasImage) {
     }
 }
 
-// --- Генерация HTML ---
+function renderActiveTags(container) {
+    container.innerHTML = Array.from(selectedTags).map(tagId => {
+        const label = RECIPE_FILTERS.find(f => f.id === tagId)?.label || tagId;
+        return `
+            <div class="tag-chip" style="display: inline-flex; align-items: center; background: #e9eef2; padding: 5px 12px; border-radius: 20px; font-size: 14px; gap: 8px; color: #102e3f;">
+                ${label}
+                <span data-action="remove-tag" data-id="${tagId}" style="cursor: pointer; font-weight: bold; color: #f28c50;">&times;</span>
+            </div>
+        `;
+    }).join('');
+}
+
 function createIngredientRowHtml(ing = null) {
     return `
         <div class="create-row create-ingredient-row" data-role="ingredient-row">
@@ -89,24 +117,34 @@ function createStepHtml(step = null) {
     `;
 }
 
-// --- Логика страницы ---
-
 export async function initCreatePage(params) {
     const root = document.getElementById('content-root');
-    if (!root) return;
+    if (!root) {
+        return;
+    }
 
     const editId = params?.get('editId');
     const groupId = params?.get('groupId');
+    
+    selectedTags.clear();
 
     renderLayout(root, !!groupId, editId);
 
     if (editId) {
-        const res = await fetch(`/api/recipes/${editId}`, { credentials: 'include' });
-        const data = await res.json();
-        fillFormWithData(root, data);
+        await loadRecipeForEdit(root, editId);
     }
 
     setupEventListeners(root, !!groupId, groupId, editId);
+}
+
+async function loadRecipeForEdit(root, editId) {
+    try {
+        const res = await fetch(`/api/recipes/${editId}`, { credentials: 'include' });
+        const data = await res.json();
+        fillFormWithData(root, data);
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 function renderLayout(root, isGroupContext, editId) {
@@ -117,10 +155,20 @@ function renderLayout(root, isGroupContext, editId) {
                 <section class="create-block">
                     <input class="create-input" type="text" placeholder="Название рецепта" data-field="title" />
                     <input class="create-input" type="number" placeholder="Время (мин)" data-field="cook-time" />
-                    <p style="font-size: 12px; color: #7c8a98; margin: -5px 0 10px 15px;">Введите время приготовления (в минутах)</p>
                     
-                    <input class="create-input" type="text" placeholder="Теги (через запятую: завтрак, ПП, быстро)" data-field="tags" />
-                    <p style="font-size: 12px; color: #7c8a98; margin: -5px 0 15px 15px;">Введите теги через запятую, например: завтрак, обед, острое</p>
+                    <div class="create-tags-section" style="margin: 10px 0 20px 0;">
+                        <p style="font-size: 14px; font-weight: 600; color: #4a5f70; margin-bottom: 8px;">Категории</p>
+                        <div id="selected-tags-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
+                        
+                        <div style="position: relative; display: inline-block;">
+                            <button type="button" class="create-btn create-btn--small" data-action="toggle-tags-popup">+ Категория</button>
+                            <div id="tags-popup" class="is-hidden" style="position: absolute; top: 100%; left: 0; background: white; border: 1px solid #d8dde4; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 10; padding: 10px; width: 200px; display: grid; gap: 4px; margin-top: 5px;">
+                                ${RECIPE_FILTERS.map(f => `
+                                    <button type="button" data-action="add-tag" data-id="${f.id}" class="group-page__menu-item" style="padding: 8px; font-size: 14px; border-radius: 6px;">${f.label}</button>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="create-row create-row--split" style="align-items: flex-start;">
                         <div class="create-step__media" style="flex-grow:1; background:none; padding:0; border:none;">
@@ -183,7 +231,10 @@ function fillFormWithData(root, data) {
     root.querySelector('[data-role="servings-value"]').value = data.basePortions;
 
     if (data.tags) {
-        root.querySelector('[data-field="tags"]').value = data.tags.join(', ');
+        data.tags
+            .filter(t => t.toLowerCase() !== "общее")
+            .forEach(t => selectedTags.add(t.toLowerCase()));
+        renderActiveTags(root.querySelector('#selected-tags-container'));
     }
 
     if (data.mainImage) {
@@ -194,145 +245,128 @@ function fillFormWithData(root, data) {
         updateImageStatusUI(container, true);
     }
 
+    fillIngredientsAndSteps(root, data);
+}
+
+function fillIngredientsAndSteps(root, data) {
     const secCont = root.querySelector('[data-role="sections"]');
     const stepCont = root.querySelector('[data-role="steps"]');
-    secCont.innerHTML = ""; stepCont.innerHTML = "";
+    secCont.innerHTML = ""; 
+    stepCont.innerHTML = "";
 
     const groups = data.ingredients.reduce((acc, ing) => {
         const s = ing.section || "Основные";
-        if (!acc[s]) acc[s] = [];
+        if (!acc[s]) {
+            acc[s] = [];
+        }
         acc[s].push(ing);
         return acc;
     }, {});
 
-    Object.entries(groups).forEach(([name, ings]) => secCont.insertAdjacentHTML('beforeend', createSectionHtml(name, ings)));
-    data.steps.forEach(s => stepCont.insertAdjacentHTML('beforeend', createStepHtml(s)));
+    Object.entries(groups).forEach(([name, ings]) => {
+        secCont.insertAdjacentHTML('beforeend', createSectionHtml(name, ings));
+    });
+    data.steps.forEach(s => {
+        stepCont.insertAdjacentHTML('beforeend', createStepHtml(s));
+    });
 }
 
 function setupEventListeners(root, isGroupContext, groupId, editId) {
     const form = root.querySelector('.create-form');
-    const statusEl = form.querySelector('[data-role="status"]');
 
-    const onPaste = async (e) => {
-        const file = e.clipboardData.files[0];
-        if (!file || !file.type.startsWith('image/')) return;
-        const active = document.activeElement;
-        const stepBlock = active.closest('[data-role="step"]');
-        let container, input, span;
-
-        if (stepBlock) {
-            container = stepBlock.querySelector('[data-role="image-container"]');
-            input = stepBlock.querySelector('[data-role="step-file-input"]');
-            span = stepBlock.querySelector('[data-role="step-file-name"]');
-        } else {
-            container = form.querySelector('[data-role="image-container"]');
-            input = form.querySelector('[data-role="cover-input"]');
-            span = form.querySelector('[data-role="cover-file-name"]');
-        }
-
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-        span.textContent = "Вставлено: " + file.name;
-        updateImageStatusUI(container, true);
-    };
-
-    document.addEventListener('paste', onPaste);
-
-    form.addEventListener('click', (e) => handleFormClicks(e, form, editId));
+    form.addEventListener('click', async (e) => {
+        await handleFormClick(e, root, form, editId);
+    });
 
     form.addEventListener('change', (e) => {
-        const input = e.target;
-        if (input.type === 'file') {
-            const mediaBlock = input.closest('.create-step__media');
-            const container = mediaBlock.querySelector('[data-role="image-container"]');
-            const span = mediaBlock.querySelector('.create-file-name');
-            if (input.files[0]) {
-                span.textContent = input.files[0].name;
-                updateImageStatusUI(container, true);
-            }
-        }
+        handleFormChange(e);
     });
 
     form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        await handleFormSubmit(form, statusEl, isGroupContext, groupId, editId);
+        await handleFormSubmit(e, form, isGroupContext, groupId, editId);
     });
 }
 
-function handleFormClicks(e, form, editId) {
+async function handleFormClick(e, root, form, editId) {
     const btn = e.target.closest('[data-action]');
-    if (!btn) return;
+    if (!btn) {
+        return;
+    }
     const action = btn.dataset.action;
+    const tagsContainer = root.querySelector('#selected-tags-container');
+    const tagsPopup = root.querySelector('#tags-popup');
 
-    // Загрузка
+    if (action === 'toggle-tags-popup') {
+        tagsPopup.classList.toggle('is-hidden');
+        return;
+    }
+    if (action === 'add-tag') {
+        selectedTags.add(btn.dataset.id);
+        renderActiveTags(tagsContainer);
+        tagsPopup.classList.add('is-hidden');
+        return;
+    }
+    if (action === 'remove-tag') {
+        selectedTags.delete(btn.dataset.id);
+        renderActiveTags(tagsContainer);
+        return;
+    }
     if (action.startsWith('upload-')) {
-        const input = btn.closest('.create-step__media').querySelector('input[type="file"]');
-        input.click();
+        btn.closest('.create-step__media, .create-row').querySelector('input[type="file"]').click();
         return;
     }
-
-    // Очистка
     if (action.startsWith('clear-')) {
-        const mediaBlock = btn.closest('.create-step__media');
-        const container = mediaBlock.querySelector('[data-role="image-container"]');
-        const input = mediaBlock.querySelector('input[type="file"]');
-        input.value = "";
-        updateImageStatusUI(container, false);
+        const mediaBlock = btn.closest('.create-step__media, .create-row');
+        mediaBlock.querySelector('input[type="file"]').value = "";
+        updateImageStatusUI(mediaBlock.querySelector('[data-role="image-container"]'), false);
         return;
     }
-
-    if (action === 'delete-recipe') {
-        if (confirm("Удалить этот рецепт?")) {
-            fetch(`/api/recipes/${editId}`, { method: 'DELETE', credentials: 'include' })
-                .then(res => res.ok && window.AppRouter.navigate('/main'));
-        }
-        return;
-    }
-
     if (action === 'inc-servings' || action === 'dec-servings') {
         const inp = form.querySelector('[data-role="servings-value"]');
         let val = parseInt(inp.value) || 1;
         inp.value = action === 'inc-servings' ? Math.min(val + 1, 99) : Math.max(val - 1, 1);
     }
-    if (action === 'add-section') form.querySelector('[data-role="sections"]').insertAdjacentHTML('beforeend', createSectionHtml());
-    if (action === 'add-step') form.querySelector('[data-role="steps"]').insertAdjacentHTML('beforeend', createStepHtml());
-    if (action === 'remove-section') btn.closest('[data-role="section"]').remove();
-    if (action === 'remove-step') btn.closest('[data-role="step"]').remove();
-    if (action === 'add-ingredient') btn.closest('[data-role="section"]').querySelector('[data-role="ingredients"]').insertAdjacentHTML('beforeend', createIngredientRowHtml());
-    if (action === 'remove-ingredient') btn.closest('[data-role="ingredient-row"]').remove();
-}
-
-async function deleteRecipe(id) {
-    if (!confirm("Вы действительно хотите удалить этот рецепт? Это действие нельзя отменить.")) {
-        return;
+    if (action === 'add-section') {
+        root.querySelector('[data-role="sections"]').insertAdjacentHTML('beforeend', createSectionHtml());
     }
-
-    try {
-        const res = await fetch(`/api/recipes/${id}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-        if (res.ok) {
-            window.AppRouter.navigate('/main');
-        } else {
-            alert("Ошибка при удалении рецепта.");
+    if (action === 'add-step') {
+        root.querySelector('[data-role="steps"]').insertAdjacentHTML('beforeend', createStepHtml());
+    }
+    if (action === 'remove-section') {
+        btn.closest('[data-role="section"]').remove();
+    }
+    if (action === 'remove-step') {
+        btn.closest('[data-role="step"]').remove();
+    }
+    if (action === 'add-ingredient') {
+        btn.closest('[data-role="section"]').querySelector('[data-role="ingredients"]').insertAdjacentHTML('beforeend', createIngredientRowHtml());
+    }
+    if (action === 'remove-ingredient') {
+        btn.closest('[data-role="ingredient-row"]').remove();
+    }
+    if (action === 'delete-recipe') {
+        if (confirm("Удалить рецепт навсегда?")) {
+            const res = await fetch(`/api/recipes/${editId}`, { method: 'DELETE', credentials: 'include' });
+            if (res.ok) {
+                window.AppRouter.navigate('/main');
+            }
         }
-    } catch (e) {
-        console.error(e);
     }
 }
 
-function handleFormChanges(e, form) {
-    if (e.target.matches('[data-role="cover-input"]')) {
-        form.querySelector('[data-role="cover-file-name"]').textContent = e.target.files[0]?.name;
-    }
-    if (e.target.matches('[data-role="step-file-input"]')) {
-        e.target.closest('[data-role="step"]').querySelector('[data-role="step-file-name"]').textContent = e.target.files[0]?.name;
+function handleFormChange(e) {
+    if (e.target.type === 'file') {
+        const mediaBlock = e.target.closest('.create-block, .create-step__media');
+        if (e.target.files[0]) {
+            mediaBlock.querySelector('.create-file-name').textContent = e.target.files[0].name;
+            updateImageStatusUI(mediaBlock.querySelector('[data-role="image-container"]'), true);
+        }
     }
 }
 
-async function handleFormSubmit(form, statusEl, isGroupContext, groupId, editId) {
+async function handleFormSubmit(e, form, isGroupContext, groupId, editId) {
+    e.preventDefault();
+    const statusEl = form.querySelector('[data-role="status"]');
     const submitBtn = form.querySelector('.create-btn--submit');
     submitBtn.disabled = true;
     statusEl.textContent = 'Сохранение...';
@@ -342,19 +376,18 @@ async function handleFormSubmit(form, statusEl, isGroupContext, groupId, editId)
         const oldCoverUrl = form.querySelector('[data-role="cover-file-name"]').dataset.currentUrl || "";
         const mainImageUrl = coverInput.files[0] ? await uploadMedia(coverInput.files[0]) : oldCoverUrl;
 
-        const tagsRaw = form.querySelector('[data-field="tags"]').value;
-        let tagsArray = tagsRaw.split(',').map(t => t.trim()).filter(t => t.length > 0);
-
-        if (tagsArray.length === 0) tagsArray.push("Общее");
+        const tagsArray = Array.from(selectedTags);
+        const finalTags = tagsArray.length > 0 ? tagsArray : ["общее"];
 
         const payload = {
-            title: form.querySelector('[data-field="title"]').value.trim() || "Без названия",
+            title: form.querySelector('[data-field="title"]').value.trim(),
             mainImage: mainImageUrl,
+            mainText: "Описание",
             isPrivate: isGroupContext ? true : (form.querySelector('[data-field="is-private"]')?.value === 'true'),
             timeMinutes: parseInt(form.querySelector('[data-field="cook-time"]').value) || 1,
             basePortions: parseInt(form.querySelector('[data-role="servings-value"]').value) || 1,
             ingredients: collectIngredients(form),
-            tags: tagsArray,
+            tags: finalTags,
             steps: await collectSteps(form)
         };
 
@@ -366,8 +399,12 @@ async function handleFormSubmit(form, statusEl, isGroupContext, groupId, editId)
         });
 
         if (res.ok) {
+            const created = await res.json().catch(() => ({}));
+            if (!editId && isGroupContext && created.id) {
+                await fetch(`/api/groups/${groupId}/recipes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(created.id), credentials: 'include' });
+            }
             statusEl.textContent = '✅ Готово';
-            setTimeout(() => window.AppRouter.navigate('/main'), 1000);
+            setTimeout(() => window.AppRouter.navigate(isGroupContext ? `/group/${groupId}` : '/main'), 1000);
         } else {
             statusEl.textContent = '❌ Ошибка сервера';
             submitBtn.disabled = false;
@@ -387,10 +424,10 @@ function collectIngredients(form) {
             if (name) {
                 ingredients.push({
                     name,
-                    amount: parseFloat(row.querySelector('[data-field="amount"]').value) || 0,
+                    amount: parseFloat(row.querySelector('[data-field="amount"]').value) || 0.1,
                     measure: row.querySelector('[data-field="unit"]').value || "",
                     section: secName,
-                    sortOrder: sIdx * 100 + rIdx
+                    sortOrder: sIdx * 100 + rIdx + 1
                 });
             }
         });
@@ -398,35 +435,18 @@ function collectIngredients(form) {
     return ingredients;
 }
 
-function clearFileInput(role, form, stepEl = null) {
-    const root = stepEl || form;
-    const input = root.querySelector(`[data-role="${role}-file-input"]`);
-    const nameSpan = root.querySelector(`[data-role="${role}-file-name"]`);
-    if (input) input.value = "";
-    if (nameSpan) {
-        nameSpan.textContent = "Фото удалено";
-        nameSpan.dataset.currentUrl = "";
-    }
-}
-
 async function collectSteps(form) {
     const steps = [];
     const blocks = form.querySelectorAll('[data-role="step"]');
     for (let i = 0; i < blocks.length; i++) {
         const content = blocks[i].querySelector('[data-field="description"]').value.trim();
-        if (!content) continue;
-
-        const file = blocks[i].querySelector('[data-role="step-file-input"]').files[0];
-        const oldUrl = blocks[i].querySelector('[data-role="step-file-name"]').dataset.currentUrl || "";
-
-        const mediaUrl = file ? await uploadMedia(file) : oldUrl;
-
-        steps.push({
-            content,
-            mediaUrl,
-            sortOrder: i + 1,
-            mediaType: mediaUrl ? "image" : ""
-        });
+        if (!content) {
+            continue;
+        }
+        const file = blocks[i].querySelector('input[type="file"]').files[0];
+        const oldUrl = blocks[i].querySelector('.create-file-name').dataset.currentUrl || "";
+        const url = file ? await uploadMedia(file) : oldUrl;
+        steps.push({ content, mediaUrl: url, sortOrder: i + 1, mediaType: url ? "image" : "" });
     }
     return steps;
 }

@@ -99,11 +99,19 @@ public class RecipeService : IRecipeService
         await _recipeRepository.DeleteRecipeAsync(recipeId);
     }
 
-    public async Task<(List<RecipeSummaryResponse> Recipes, int TotalCount)> GetAllPublicAsync(string? searchTerm,
-        PaginationQuery query, Guid currentUserId)
+    public async Task<(List<RecipeSummaryResponse> Recipes, int TotalCount)> GetAllPublicAsync(
+        string? searchTerm, 
+        PaginationQuery query, 
+        Guid currentUserId)
     {
-        var (summaries, totalCount) = await _recipeRepository.GetAllPublicAsync(searchTerm, query.Page, query.PageSize);
-        return (await MapWithFavorites(summaries, currentUserId), totalCount);
+        var (summaries, totalCount) = await _recipeRepository.GetAllPublicAsync(
+            searchTerm, 
+            query.Page, 
+            query.PageSize, 
+            query.Tags); 
+
+        var responses = await MapWithFavorites(summaries, currentUserId);
+        return (responses, totalCount);
     }
 
     public async Task<(List<RecipeSummaryResponse> Recipes, int TotalCount)> GetByUserIdAsync(Guid userId,

@@ -126,12 +126,13 @@ public class GroupsController : ControllerBase
     }
 
     [HttpGet("{id:guid}/recipes")]
-    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetGroupRecipes(Guid id, [FromQuery] PaginationQuery query)
+    public async Task<ActionResult<PagedResponse<RecipeSummaryResponse>>> GetGroupRecipes(Guid id,
+        [FromQuery] PaginationQuery query, [FromQuery] string? searchTerm = null)
     {
         var currentUserId = User.GetUserId();
-        
-        var result = await _groupService.GetGroupRecipesPagedAsync(id, query, currentUserId);
-        
+
+        var result = await _groupService.GetGroupRecipesPagedAsync(id, query, currentUserId, searchTerm);
+
         return Ok(result);
     }
 
@@ -144,14 +145,14 @@ public class GroupsController : ControllerBase
 
         return Ok(new { message = "Recipe successfully added to group", recipeId });
     }
-    
+
     [HttpPost("{id:guid}/members/by-username")]
     public async Task<IActionResult> AddMemberByUsername(Guid id, [FromBody] AddMemberByUserNameRequest request)
     {
         var userId = User.GetUserId();
-        
+
         await _groupService.AddMemberByUsernameAsync(userId, id, request.UserName);
-    
+
         return Ok(new { message = "User successfully added to group", userName = request.UserName });
     }
 }

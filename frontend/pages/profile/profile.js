@@ -3,6 +3,10 @@ import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
 const profileState = {
     user: null,
     activeTab: 'recipes',
+    recipePage: 1,
+    recipeTotalPages: 1,
+    favPage: 1,
+    favTotalPages: 1
 };
 
 const tabs = [
@@ -11,16 +15,8 @@ const tabs = [
     { id: 'favorites', label: 'Избранное' }
 ];
 
-const escapeHtml = window.AppUtils?.escapeHtml || ((v) => {
-    return v;
-});
-
-const getInitials = window.AppUtils?.getInitials || ((n) => {
-    if (n) {
-        return n[0].toUpperCase();
-    }
-    return '?';
-});
+const escapeHtml = window.AppUtils?.escapeHtml || (v => v);
+const getInitials = window.AppUtils?.getInitials || (n => n ? n[0].toUpperCase() : '?');
 
 async function uploadAvatar(file) {
     const formData = new FormData();
@@ -31,7 +27,7 @@ async function uploadAvatar(file) {
         credentials: 'include'
     });
     if (!res.ok) {
-        throw new Error('Не удалось загрузить файл');
+        throw new Error('Ошибка загрузки');
     }
     const data = await res.json();
     return data.url || data.path;
@@ -43,12 +39,12 @@ export async function initProfilePage() {
         return;
     }
 
-    root.innerHTML = '<div class="loader">Загрузка профиля...</div>';
+    root.innerHTML = '<div class="loader">Загрузка...</div>';
 
     await fetchProfileData();
 
     if (!profileState.user) {
-        root.innerHTML = '<p style="text-align:center; padding:50px;">Ошибка загрузки. Попробуйте обновить страницу.</p>';
+        root.innerHTML = '<p style="text-align:center; padding:50px;">Ошибка загрузки.</p>';
         return;
     }
 
@@ -58,11 +54,10 @@ export async function initProfilePage() {
 
 async function fetchProfileData() {
     try {
-        const res = await fetch('/api/users/me', {
-            credentials: 'include'
-        });
+        const res = await fetch('/api/users/me', { credentials: 'include' });
         if (res.ok) {
             profileState.user = await res.json();
+            window.currentUserId = profileState.user.id;
         } else {
             window.AppRouter.navigate('/auth');
         }
@@ -100,26 +95,20 @@ function renderLayout(root) {
                 </div>
             </div>
             <div class="profile-tabs search-filters__filters">
-                ${renderTabsHtml().trim()}
+                ${tabs.map(tab => `
+                    <button type="button" 
+                            class="search-filters__button profile-tab-btn ${profileState.activeTab === tab.id ? 'is-active' : ''}" 
+                            data-tab="${tab.id}">
+                        ${tab.label}
+                    </button>
+                `).join('')}
             </div>
             <div class="profile-content" id="profile-tab-content"></div>
         </section>
-    `.trim();
+    `;
 
     root.removeEventListener('click', handleProfileClicks);
     root.addEventListener('click', handleProfileClicks);
-}
-
-function renderTabsHtml() {
-    return tabs.map((tab) => {
-        return `
-            <button type="button" 
-                    class="search-filters__button profile-tab-btn ${profileState.activeTab === tab.id ? 'is-active' : ''}" 
-                    data-tab="${tab.id}">
-                ${tab.label}
-            </button>
-        `;
-    }).join('');
 }
 
 async function renderActiveTabContent(root) {
@@ -127,98 +116,161 @@ async function renderActiveTabContent(root) {
     if (!container) {
         return;
     }
-    container.innerHTML = '<div class="loader">Загрузка контента...</div>';
 
-    try {
-        if (profileState.activeTab === 'recipes') {
-            await renderRecipesTab(container);
-        } else if (profileState.activeTab === 'groups') {
-            await renderGroupsTab(container);
-        } else if (profileState.activeTab === 'favorites') {
-            await renderFavoritesTab(container, root);
-        }
-    } catch (e) {
-        console.error(e);
-        container.innerHTML = 'Ошибка загрузки данных.';
+    if (profileState.activeTab === 'recipes') {
+        profileState.recipePage = 1;
+        await renderRecipesTab(container, root, false);
+    } else if (profileState.activeTab === 'groups') {
+        await renderGroupsTab(container);
+    } else if (profileState.activeTab === 'favorites') {
+        profileState.favPage = 1;
+        await renderFavoritesTab(container, root, false);
     }
 }
 
-async function renderRecipesTab(container) {
-    const res = await fetch(`/api/recipes/user/${profileState.user.id}?page=1&pageSize=50`, {
-        credentials: 'include'
-    });
-    const data = await res.json();
+async function renderRecipesTab(container, root, append = false) {
+    if (!append) {
+        container.innerHTML = `
+            <div class="profile-recipes-actions" style="margin-bottom: 20px;">
+                <button type="button" class="profile-create-group-btn" onclick="window.AppRouter.navigate('/create')">➕ Создать рецепт</button>
+            </div>
+            <div class="profile-cards-grid"></div>
+        `;
+    }
+    const grid = container.querySelector('.profile-cards-grid');
 
-    container.innerHTML = `
-        <div class="profile-recipes-actions" style="margin-bottom: 20px;">
-            <button type="button" class="profile-create-group-btn" onclick="window.AppRouter.navigate('/create')">➕ Создать рецепт</button>
-        </div>
-        <div class="profile-cards-grid"></div>
-    `;
+    try {
+        const res = await fetch(`/api/recipes/user/${profileState.user.id}?page=${profileState.recipePage}&pageSize=50`, { credentials: 'include' });
+        const data = await res.json();
+        profileState.recipeTotalPages = data.totalPages;
 
-    if (!data.items?.length) {
-        container.querySelector('.profile-cards-grid').innerHTML = '<div class="profile-empty">Тут пока пусто, время что-нибудь приготовить!</div>';
-    } else {
-        const recipes = data.items.map(r => ({
-            ...r,
-            image: r.mainImage,
-            time: r.timeMinutes,
-            author: r.authorName,
-            isFavorite: r.isFavorite
+        if (!append && !data.items?.length) {
+            grid.innerHTML = '<div class="profile-empty">Тут пока пусто.</div>';
+            return;
+        }
+
+        const mapped = data.items.map(r => ({
+            ...r, image: r.mainImage, time: r.timeMinutes, author: r.authorName, isFavorite: r.isFavorite, favoritesCount: r.favoritesCount
         }));
-        RecipeCard.renderRecipeCards(recipes, container.querySelector('.profile-cards-grid'));
+
+        const temp = document.createElement('div');
+        RecipeCard.renderRecipeCards(mapped, temp);
+        while (temp.firstChild) {
+            grid.appendChild(temp.firstChild);
+        }
+
+        renderLoadMoreBtn(container, root);
+    } catch (e) {
+        container.innerHTML = 'Ошибка загрузки.';
     }
 }
 
 async function renderGroupsTab(container) {
-    const res = await fetch('/api/users/me/groups?page=1&pageSize=50', {
-        credentials: 'include'
-    });
+    container.innerHTML = '<div class="loader">Загрузка...</div>';
+    const res = await fetch('/api/users/me/groups?page=1&pageSize=50', { credentials: 'include' });
     const data = await res.json();
     container.innerHTML = `
         <div class="profile-groups-actions">
             <button type="button" class="profile-create-group-btn" data-action="create-group">Создать группу</button>
         </div>
         <div class="profile-groups-grid">
-            ${data.items.map((group) => {
-                return `
+            ${data.items.map(group => `
                 <a class="profile-group-card page-card" href="/group/${group.id}">
                     <div class="profile-group-card__title">${escapeHtml(group.name)}</div>
                     <div class="profile-group-card__meta">${group.membersCount} участников</div>
-                </a>`;
-            }).join('')}
-        </div>
-    `.trim();
+                </a>`).join('')}
+        </div>`;
 }
 
-async function renderFavoritesTab(container, root) {
-    const res = await fetch('/api/users/me/favorites?page=1&pageSize=50', {
-        credentials: 'include'
-    });
-    const data = await res.json();
-
-    if (!data.items?.length) {
-        container.innerHTML = '<div class="profile-empty">У вас пока нет избранных рецептов.</div>';
-    } else {
+async function renderFavoritesTab(container, root, append = false) {
+    if (!append) {
         container.innerHTML = '<div class="profile-cards-grid"></div>';
-        const grid = container.querySelector('.profile-cards-grid');
-        const recipes = data.items.map((r) => {
-            return {
-                ...r,
-                image: r.mainImage,
-                time: r.timeMinutes,
-                author: r.authorName,
-                isFavorite: true,
-                favoritesCount: r.favoritesCount
-            };
-        });
-        RecipeCard.renderRecipeCards(recipes, grid, {
+    }
+    const grid = container.querySelector('.profile-cards-grid');
+
+    try {
+        const res = await fetch(`/api/users/me/favorites?page=${profileState.favPage}&pageSize=50`, { credentials: 'include' });
+        const data = await res.json();
+        profileState.favTotalPages = data.totalPages;
+
+        if (!append && !data.items?.length) {
+            container.innerHTML = '<div class="profile-empty">У вас пока нет избранных рецептов.</div>';
+            return;
+        }
+
+        const mapped = data.items.map(r => ({
+            ...r, image: r.mainImage, time: r.timeMinutes, author: r.authorName, isFavorite: true, favoritesCount: r.favoritesCount
+        }));
+
+        const temp = document.createElement('div');
+        RecipeCard.renderRecipeCards(mapped, temp, {
             onFavoriteClick: (recipe) => {
                 if (!recipe.isFavorite) {
-                    renderActiveTabContent(root);
+                    initProfilePage();
                 }
             }
         });
+        while (temp.firstChild) {
+            grid.appendChild(temp.firstChild);
+        }
+
+        renderLoadMoreBtn(container, root);
+    } catch (e) {
+        container.innerHTML = 'Ошибка загрузки.';
+    }
+}
+
+function renderLoadMoreBtn(container, root) {
+    let oldBtn = document.getElementById('load-more-profile-btn');
+    if (oldBtn) {
+        oldBtn.remove();
+    }
+
+    const isRecipes = profileState.activeTab === 'recipes';
+    const currentP = isRecipes ? profileState.recipePage : profileState.favPage;
+    const totalP = isRecipes ? profileState.recipeTotalPages : profileState.favTotalPages;
+
+    if (currentP < totalP) {
+        const wrapper = document.createElement('div');
+        wrapper.id = 'load-more-profile-btn';
+        wrapper.style.cssText = 'display:flex; justify-content:center; padding:30px 0; width:100%; grid-column: 1 / -1;';
+        
+        const btn = document.createElement('button');
+        btn.style.cssText = `
+            background-color: #6a852f;
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 4px 12px rgba(106, 133, 47, 0.2);
+            font-family: inherit;
+        `;
+        btn.textContent = 'Показать ещё';
+        
+        btn.onmouseover = () => {
+            btn.style.backgroundColor = '#556b26';
+        };
+        btn.onmouseout = () => {
+            btn.style.backgroundColor = '#6a852f';
+        };
+
+        btn.onclick = () => {
+            btn.disabled = true;
+            btn.textContent = 'Загрузка...';
+            if (isRecipes) {
+                profileState.recipePage++;
+                renderRecipesTab(container, root, true);
+            } else {
+                profileState.favPage++;
+                renderFavoritesTab(container, root, true);
+            }
+        };
+        wrapper.appendChild(btn);
+        container.appendChild(wrapper);
     }
 }
 
@@ -232,9 +284,7 @@ async function handleProfileClicks(e) {
 
     const tabBtn = target.closest('[data-tab]');
     if (tabBtn) {
-        profileState.activeTab = tabBtn.dataset.tab;
-        renderLayout(root);
-        await renderActiveTabContent(root);
+        handleTabSwitch(tabBtn, root);
         return;
     }
 
@@ -243,46 +293,35 @@ async function handleProfileClicks(e) {
     }
 
     if (target.closest('[data-action="logout"]')) {
-        await handleLogout();
+        await executeLogout();
     }
 
     if (target.closest('[data-action="create-group"]')) {
-        window.GroupCreateModal?.open({
-            onCreated: () => {
-                initProfilePage();
-            }
-        });
+        window.GroupCreateModal?.open({ onCreated: () => initProfilePage() });
     }
 
     if (target.closest('[data-action="edit-profile"]')) {
-        openEditModal(root);
+        openEditModal();
     }
 }
 
-async function handleLogout() {
-    await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-    });
-    if (window.AppRouter) {
-        window.AppRouter.setAuthState(false);
-        window.AppRouter.navigate('/main');
-        window.dispatchEvent(new CustomEvent('auth:changed'));
-    }
+async function handleTabSwitch(tabBtn, root) {
+    profileState.activeTab = tabBtn.dataset.tab;
+    renderLayout(root);
+    await renderActiveTabContent(root);
 }
 
-function openEditModal(root) {
+async function executeLogout() {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    window.AppRouter.setAuthState(false);
+    window.AppRouter.navigate('/auth');
+}
+
+function openEditModal() {
     const user = profileState.user;
     const backdrop = document.createElement('div');
     backdrop.className = 'profile-edit-backdrop';
-    backdrop.innerHTML = getEditModalTemplate(user).trim();
-
-    document.body.appendChild(backdrop);
-    setupEditModalEvents(backdrop, user);
-}
-
-function getEditModalTemplate(user) {
-    return `
+    backdrop.innerHTML = `
         <div class="profile-edit-modal">
             <div class="profile-edit-modal__header">
                 <h2 class="profile-edit-modal__title">Настройки</h2>
@@ -306,9 +345,13 @@ function getEditModalTemplate(user) {
             </div>
         </div>
     `;
+
+    document.body.appendChild(backdrop);
+    setupEditModalListeners(backdrop);
 }
 
-function setupEditModalEvents(backdrop, user) {
+function setupEditModalListeners(backdrop) {
+    const user = profileState.user;
     let currentAvatarUrl = user.avatarUrl;
     const closeModal = () => {
         backdrop.remove();
@@ -335,13 +378,8 @@ function setupEditModalEvents(backdrop, user) {
         const newName = backdrop.querySelector('#edit-name').value.trim();
         const res = await fetch('/api/users/me', {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                displayName: newName,
-                avatarUrl: currentAvatarUrl
-            }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ displayName: newName, avatarUrl: currentAvatarUrl }),
             credentials: 'include'
         });
         if (res.ok) {

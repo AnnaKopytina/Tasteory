@@ -24,7 +24,7 @@ public interface IGroupRepository
     public Task<bool> IsInviteCodeExistsAsync(string code);
 
     public Task<(List<RecipeSummary> Items, int TotalCount)> GetGroupRecipesPagedAsync(Guid groupId, int page,
-        int pageSize);
+        int pageSize,  string[]? tags = null, string? searchTerm = null);
 
     public Task<bool> IsRecipeInGroupAsync(Guid groupId, Guid recipeId);
     public Task AddRecipeToGroupAsync(Guid groupId, Guid recipeId);

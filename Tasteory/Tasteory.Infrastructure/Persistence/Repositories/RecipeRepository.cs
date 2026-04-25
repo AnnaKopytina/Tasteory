@@ -23,7 +23,7 @@ public class RecipeRepository : IRecipeRepository
     public async Task<Guid> CreateRecipeAsync(Recipe recipe)
     {
         var entity = _mapper.Map<RecipeEntity>(recipe);
-        
+
         entity.Ingredients = _mapper.Map<List<IngredientEntity>>(recipe.Ingredients);
         entity.Steps = _mapper.Map<List<StepEntity>>(recipe.Steps);
 
@@ -57,15 +57,16 @@ public class RecipeRepository : IRecipeRepository
     public async Task DeleteRecipeAsync(Guid id)
     {
         var entity = await _context.Recipes.FindAsync(id);
-        
+
         if (entity is not null)
         {
             _context.Recipes.Remove(entity);
             await _context.SaveChangesAsync();
         }
     }
-    
-    public async Task<(List<RecipeSummary> Recipes, int TotalCount)> GetAllPublicAsync(string? searchTerm, int page, int pageSize)
+
+    public async Task<(List<RecipeSummary> Recipes, int TotalCount)> GetAllPublicAsync(string? searchTerm, int page,
+        int pageSize, string[]? tags = null)
     {
         var query = _context.Recipes
             .AsNoTracking()
@@ -73,7 +74,13 @@ public class RecipeRepository : IRecipeRepository
 
         if (!string.IsNullOrWhiteSpace(searchTerm))
         {
-            query = query.Where(r => r.Title.Contains(searchTerm) || r.MainText!.Contains(searchTerm));
+            var searchLower = searchTerm.ToLower();
+            query = query.Where(r => r.Title.ToLower().Contains(searchLower) || r.MainText!.ToLower().Contains(searchLower));
+        }
+        
+        if (tags != null && tags.Any())
+        {
+            query = query.Where(r => r.Tags.Any(t => tags.Contains(t)));
         }
 
         var totalCount = await query.CountAsync();
@@ -88,7 +95,8 @@ public class RecipeRepository : IRecipeRepository
         return (recipes, totalCount);
     }
 
-    public async Task<(List<RecipeSummary> Recipes, int TotalCount)> GetByUserIdAsync(Guid userId, int page, int pageSize)
+    public async Task<(List<RecipeSummary> Recipes, int TotalCount)> GetByUserIdAsync(Guid userId, int page,
+        int pageSize)
     {
         var query = _context.Recipes
             .AsNoTracking()
@@ -116,7 +124,7 @@ public class RecipeRepository : IRecipeRepository
             .ProjectTo<RecipeSummary>(_mapper.ConfigurationProvider)
             .ToListAsync();
     }
-    
+
 
     public async Task UpdateRecipeAsync(Recipe recipe)
     {
@@ -143,8 +151,9 @@ public class RecipeRepository : IRecipeRepository
 
         await _context.SaveChangesAsync();
     }
-    
-    public async Task<(List<RecipeSummary> Items, int TotalCount)> GetFavoritesByUserIdAsync(Guid userId, int page, int pageSize)
+
+    public async Task<(List<RecipeSummary> Items, int TotalCount)> GetFavoritesByUserIdAsync(Guid userId, int page,
+        int pageSize)
     {
         var query = _context.UserFavoriteRecipes
             .AsNoTracking()
@@ -153,7 +162,7 @@ public class RecipeRepository : IRecipeRepository
             .Select(f => f.Recipe);
 
         var totalCount = await query.CountAsync();
-        
+
         var items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

@@ -159,11 +159,23 @@ public class GroupRepository : IGroupRepository
             .AnyAsync(i => i.Code == code);
     }
 
-    public async Task<(List<RecipeSummary> Items, int TotalCount)> GetGroupRecipesPagedAsync(Guid groupId, int page, int pageSize)
+    public async Task<(List<RecipeSummary> Items, int TotalCount)> GetGroupRecipesPagedAsync(Guid groupId, int page,
+        int pageSize, string[]? tags = null, string? searchTerm = null)
     {
         var query = _context.Recipes
             .AsNoTracking()
             .Where(r => _context.GroupRecipes.Any(gr => gr.GroupId == groupId && gr.RecipeId == r.Id));
+        
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var searchLower = searchTerm.ToLower();
+            query = query.Where(r => r.Title.ToLower().Contains(searchLower) || r.MainText!.ToLower().Contains(searchLower));
+        }
+        
+        if (tags != null && tags.Any())
+        {
+            query = query.Where(r => r.Tags.Any(t => tags.Contains(t)));
+        }
 
         var totalCount = await query.CountAsync();
 
@@ -171,7 +183,7 @@ public class GroupRepository : IGroupRepository
         {
             return (new List<RecipeSummary>(), 0);
         }
-        
+
         var items = await query
             .OrderByDescending(r => r.CreatedAt)
             .Skip((page - 1) * pageSize)
@@ -198,7 +210,7 @@ public class GroupRepository : IGroupRepository
 
         await _context.SaveChangesAsync();
     }
-    
+
     public async Task<bool> HasCommonGroupAsync(Guid userId, Guid recipeId)
     {
         return await _context.UserGroups

@@ -151,10 +151,11 @@ public class GroupService : IGroupService
     public async Task<PagedResponse<RecipeSummaryResponse>> GetGroupRecipesPagedAsync(
         Guid groupId,
         PaginationQuery query,
-        Guid currentUserId)
+        Guid currentUserId,
+        string? searchTerm = null)
     {
         var (summaries, totalCount) =
-            await _groupRepository.GetGroupRecipesPagedAsync(groupId, query.Page, query.PageSize);
+            await _groupRepository.GetGroupRecipesPagedAsync(groupId, query.Page, query.PageSize, query.Tags, searchTerm);
 
         if (summaries.Count == 0)
         {
