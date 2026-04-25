@@ -262,7 +262,8 @@ async function handleLogout() {
     });
     if (window.AppRouter) {
         window.AppRouter.setAuthState(false);
-        window.AppRouter.navigate('/auth');
+        window.AppRouter.navigate('/main');
+        window.dispatchEvent(new CustomEvent('auth:changed'));
     }
 }
 

@@ -143,3 +143,7 @@ svg.icon {
 .nav-group.active #toggle-groups .icon:first-child {
     transform: rotate(90deg);
 }
+
+.auth-route .sidebar {
+    display: none !important;
+}

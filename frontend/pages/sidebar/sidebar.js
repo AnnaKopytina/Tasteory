@@ -31,9 +31,7 @@
     }
 
     function replaceSidebarIconsWithSvg() {
-        document.querySelectorAll('.sidebar [data-icon]').forEach((element) => {
-            processIconElement(element);
-        });
+        document.querySelectorAll('.sidebar [data-icon]').forEach(processIconElement);
     }
 
     replaceSidebarIconsWithSvg();
@@ -72,14 +70,26 @@
         try {
             const data = await fetchGroupsData();
             const groupsData = data.items || [];
-
             groupsList.innerHTML = '';
             if (!groupsData.length) {
-                renderEmptyGroupsState();
+                const empty = document.createElement('div');
+                empty.className = 'sub-item';
+                empty.style.fontSize = '14px';
+                empty.textContent = 'Пока групп нет';
+                groupsList.appendChild(empty);
                 return;
             }
-
-            renderGroupsList(groupsData);
+            groupsData.forEach(g => {
+                const item = document.createElement('a');
+                item.href = `/group/${g.id}`;
+                item.className = 'sub-item';
+                const icon = createIcon('group', 'icon');
+                const label = document.createElement('span');
+                label.textContent = g.name;
+                if (icon) item.append(icon);
+                item.append(label);
+                groupsList.appendChild(item);
+            });
         } catch (error) {
             groupsList.innerHTML = '<div class="sub-item" style="color:red; font-size:12px">Ошибка загрузки</div>';
         }
@@ -110,31 +120,80 @@
         });
     }
 
-    toggleGroupsBtn.addEventListener('click', async () => {
-        const isOpen = !navGroupContainer.classList.contains('active');
-        setGroupsVisibility(isOpen);
-        if (isOpen) {
-            await loadAndRenderGroups();
-        }
-    });
+    async function updateSidebarUI() {
+        const isAuth = await window.AppRouter.isAuthorized();
+        const sidebar = document.querySelector('.sidebar');
 
-    addGroupBtn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (window.GroupCreateModal && window.GroupCreateModal.open) {
-            window.GroupCreateModal.open({
-                onCreated: () => {
-                    loadAndRenderGroups().catch(console.error);
+        if (!isAuth) {
+            groupsList.innerHTML = '';
+            navGroupContainer.classList.remove('active');
+        }
+
+        const profileLink = sidebar.querySelector('a[data-page="Профиль"]');
+        if (profileLink) {
+            if (!isAuth) {
+                profileLink.href = '/auth'; // Важно: меняем на публичный путь
+                profileLink.querySelector('span:last-child').textContent = 'Вход/Регистрация';
+            } else {
+                profileLink.href = '/profile';
+                profileLink.querySelector('span:last-child').textContent = 'Профиль';
+            }
+        }
+
+        const navItems = sidebar.querySelectorAll('.nav-item');
+        navItems.forEach(item => {
+            const href = item.getAttribute('href');
+
+            if (!isAuth) {
+                if (href === '/auth') {
+                    item.style.color = '#f28c50';
+                } else if (href === '/main' || href === '/') {
+                    item.style.color = '#0a2533';
+                } else {
+                    item.style.color = '#7c8a98';
                 }
-            });
+            } else {
+                item.style.color = '#0a2533';
+            }
+        });
+
+        addGroupBtn.style.display = isAuth ? 'inline-flex' : 'none';
+    }
+
+
+    document.querySelector('.side-nav').addEventListener('click', async (e) => {
+        const link = e.target.closest('.nav-item, .sub-item');
+        if (!link) return;
+
+        const isAuth = await window.AppRouter.isAuthorized();
+        const href = link.getAttribute('href');
+
+        const isProtected = href && (href.includes('/create') || href.includes('/favorite') || href.includes('/group'));
+        const isGroupToggle = e.target.closest('#toggle-groups');
+
+
+        if (!isAuth && (isProtected || isGroupToggle)) {
+            e.preventDefault();
+            e.stopPropagation();
+            alert("Чтобы пользоваться этой функцией, нужно войти в аккаунт.");
         }
     });
 
-    window.addEventListener('groups:changed', () => {
-        if (navGroupContainer.classList.contains('active')) {
-            loadAndRenderGroups().catch(console.error);
-        }
+
+    toggleGroupsBtn.addEventListener('click', async () => {
+        const isAuth = await window.AppRouter.isAuthorized();
+        if (!isAuth) return;
+
+        const isOpen = !navGroupContainer.classList.contains('active');
+        navGroupContainer.classList.toggle('active', isOpen);
+        if (isOpen) await loadAndRenderGroups();
     });
 
-    setGroupsVisibility(false);
+    addGroupBtn.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        window.GroupCreateModal?.open({ onCreated: () => loadAndRenderGroups().catch(console.error) });
+    });
+    
+    window.addEventListener('auth:changed', updateSidebarUI);
+    updateSidebarUI();
 })();

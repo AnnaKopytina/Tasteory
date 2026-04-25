@@ -58,7 +58,9 @@ export function initAuthPage() {
 function renderAuthLayout(root) {
     root.innerHTML = `
         <div class="auth-page">
-            <div class="auth-illustration" aria-hidden="true"></div>
+            <div class="auth-illustration" aria-hidden="true">
+                <img src="../svg/auth/installation.svg" alt="Some food.">    
+            </div>
             <div class="auth-form-section">
                 <div class="auth-header">
                     <div class="logo">Tasteory</div>
@@ -224,7 +226,9 @@ async function loginUser(email, password, errorContainer) {
     if (response.ok) {
         if (window.AppRouter) {
             window.AppRouter.setAuthState(true);
-            window.AppRouter.navigate('/main');
+
+            const backTo = window.AppRouter.consumeIntendedUrl();
+            window.AppRouter.navigate(backTo || '/main');
         }
     } else {
         errorContainer.textContent = 'Неверная почта или пароль.';

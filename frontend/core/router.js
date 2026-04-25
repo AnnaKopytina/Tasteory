@@ -1,6 +1,7 @@
 (function () {
     const loadedStyles = new Set();
     const loadingStyles = new Map();
+    let intendedUrl = null;
 
     const routes = {
         '/auth': { title: 'Вход', css: '/auth/auth.css', module: '../auth/auth.js', initKey: 'initAuthPage' },
@@ -55,10 +56,15 @@
 
     function setAuthState(isAuth) {
         state.isAuthenticated = isAuth;
+        window.dispatchEvent(new CustomEvent('auth:changed'));
     }
 
     function applyLayoutMode(routeKey) {
-        document.body.classList.toggle('auth-route', routeKey === '/auth');
+        if (routeKey === '/auth') {
+            document.body.classList.add('auth-route');
+        } else {
+            document.body.classList.remove('auth-route');
+        }
     }
 
     async function ensureStylesheet(href) {
@@ -150,35 +156,24 @@
 
     async function renderPage(url, pushState = true) {
         const root = getContentRoot();
-        if (!root) {
-            return;
-        }
+        if (!root) return;
 
         const { path, params } = parseUrl(url);
-
-        if (path === '/join') {
-            const code = params.get('code');
-            if (code) {
-                return handleJoinRedirect(code, root);
-            }
-            return navigate('/main', true);
-        }
-
         const { route, routeKey, dynamicId } = resolveRoute(path);
+        applyLayoutMode(routeKey);
         const hasToken = await isAuthorized();
+        const protectedRoutes = ['/create', '/favorite', '/profile', '/group'];
 
-        if (routeKey !== '/auth' && !hasToken) {
-            if (pushState) {
-                window.history.pushState({}, '', '/auth');
+
+        if (protectedRoutes.includes(routeKey) || path.startsWith('/group/')) {
+            if (!hasToken) {
+                intendedUrl = url;
+                alert("Чтобы пользоваться этой функцией, нужно войти в аккаунт.");
+                return navigate('/auth', true);
             }
-            return renderPage('/auth', false);
         }
-
         if (routeKey === '/auth' && hasToken) {
-            if (pushState) {
-                window.history.pushState({}, '', '/main');
-            }
-            return renderPage('/main', false);
+            return navigate('/main', false);
         }
 
         await executePageRender(route, routeKey, url, root, params, dynamicId, pushState);
@@ -254,7 +249,21 @@
         return renderPage(url, pushState);
     }
 
-    window.AppRouter = { start, navigate, setAuthState };
+    window.AppRouter = {
+        start,
+        navigate,
+        setAuthState: (isAuth) => {
+            state.isAuthenticated = isAuth;
+            window.dispatchEvent(new CustomEvent('auth:changed'));
+        },
+        isAuthorized,
+        consumeIntendedUrl: () => {
+            const url = intendedUrl;
+            intendedUrl = null;
+            return url;
+        }
+    };
+
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', start);
     } else {

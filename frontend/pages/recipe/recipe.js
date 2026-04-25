@@ -84,6 +84,12 @@ window.deleteNote = async function(index, isPrivate) {
 };
 
 window.toggleFavorite = async function() {
+    const isAuth = await window.AppRouter.isAuthorized();
+    if (!isAuth) {
+        alert("Чтобы сохранять рецепты, нужно войти в аккаунт.");
+        return;
+    }
+
     const data = window.currentRecipeData;
     const isAdding = !data.isFavorite;
     const res = await fetch(`/api/favorites/${data.id}`, {
