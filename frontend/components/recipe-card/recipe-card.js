@@ -13,33 +13,44 @@ export class RecipeCard {
         this.onFavoriteClick = options.onFavoriteClick || (() => {});
     }
 
+    formatISOTime(minutes) {
+        return `PT${minutes || 0}M`;
+    }
+
     render() {
         const { id, title, image, time, favoritesCount, author, isFavorite } = this.recipe;
         const groupParam = this.getGroupParam();
         const favActive = isFavorite ? 'recipe-card__favorite--active' : '';
 
         return `
-            <a href="/recipe?id=${id}${groupParam}" class="recipe-card" data-recipe-id="${id}">
+            <a href="/recipe?id=${id}${groupParam}" 
+               class="recipe-card" 
+               data-recipe-id="${id}"
+               itemscope itemtype="http://schema.org/Recipe">
+                
                 ${this.renderImageSection(image, favActive).trim()}
-                ${this.renderContentSection(title, favoritesCount, time, author).trim()}
+                ${this.renderContentSection().trim()}
             </a>
         `.trim();
     }
 
     getGroupParam() {
-        if (this.options.groupId) {
-            return `&groupId=${this.options.groupId}`;
-        }
-        return '';
+        return this.options.groupId ? `&groupId=${this.options.groupId}` : '';
     }
 
     renderImageSection(image, favActive) {
         const currentId = window.currentUserId || localStorage.getItem('userId');
-        const isAuthor = currentId && String(this.recipe.authorId).toLowerCase() === String(currentId).toLowerCase();
+        const authorId = this.recipe.authorId || this.recipe.AuthorId;
+
+        const isAuthor = currentId && authorId &&
+            String(authorId).toLowerCase() === String(currentId).toLowerCase();
 
         return `
         <div class="recipe-card__image-wrapper">
-            <img src="${image || '/components/recipe-card/no-photo.png'}" class="recipe-card__image">
+            <img src="${image || '/components/recipe-card/no-photo.png'}" 
+                 class="recipe-card__image" 
+                 itemprop="image"
+                 alt="${this.recipe.title}">
             
             <div class="recipe-card__actions">
                 ${isAuthor ? `
@@ -63,26 +74,6 @@ export class RecipeCard {
     `;
     }
 
-    renderContentSection(title, favoritesCount, time, author) {
-        return `
-            <div class="recipe-card__content">
-                <h3 class="recipe-card__title">${title}</h3>
-                <div class="recipe-card__meta">
-                    <div class="recipe-card__meta-item">
-                        <span class="recipe-card__meta-icon">${renderIcon('bookmark', 'recipe-card__icon recipe-card__icon--compact')}</span>
-                        <span data-role="fav-count">${favoritesCount || 0}</span>
-                    </div>
-                    <span class="recipe-card__separator">${renderIcon('separator', 'recipe-card__icon')}</span>
-                    <div class="recipe-card__meta-item">
-                        <span class="recipe-card__meta-icon">${renderIcon('time', 'recipe-card__icon')}</span>
-                        <span>${time || 0} Мин</span>
-                    </div>
-                </div>
-                <p class="recipe-card__author">${author || 'Автор'}</p>
-            </div>
-        `;
-    }
-
     bindEvents(container) {
         const element = container.querySelector(`[data-recipe-id="${this.recipe.id}"]`);
         if (!element) {
@@ -97,6 +88,40 @@ export class RecipeCard {
                 await this.handleToggleFavorite(e, favoriteBtn, countSpan);
             });
         }
+    }
+
+    renderContentSection() {
+        const { title, favoritesCount, time, author } = this.recipe;
+
+        return `
+            <div class="recipe-card__content">
+                <h3 class="recipe-card__title" itemprop="name">${title}</h3>
+                
+                <div class="recipe-card__meta">
+                    <div class="recipe-card__meta-item" 
+                         itemprop="aggregateRating" itemscope itemtype="http://schema.org/AggregateRating">
+                        <meta itemprop="ratingValue" content="5">
+                        <meta itemprop="bestRating" content="5">
+                        <span class="recipe-card__meta-icon">${renderIcon('bookmark', 'recipe-card__icon recipe-card__icon--compact')}</span>
+                        <span data-role="fav-count" itemprop="ratingCount">${favoritesCount || 0}</span>
+                    </div>
+                    
+                    <span class="recipe-card__separator">${renderIcon('separator', 'recipe-card__icon')}</span>
+                    
+                    <div class="recipe-card__meta-item">
+                        <span class="recipe-card__meta-icon">${renderIcon('time', 'recipe-card__icon')}</span>
+                        <meta itemprop="prepTime" content="${this.formatISOTime(time)}">
+                        <span>${time || 0} Мин</span>
+                    </div>
+                </div>
+                
+                <p class="recipe-card__author">
+                    <span itemprop="author" itemscope itemtype="http://schema.org/Person">
+                        <span itemprop="name">${author || 'Автор'}</span>
+                    </span>
+                </p>
+            </div>
+        `;
     }
 
     async handleToggleFavorite(e, favoriteBtn, countSpan) {
