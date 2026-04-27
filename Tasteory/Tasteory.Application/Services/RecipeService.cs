@@ -84,6 +84,7 @@ public class RecipeService : IRecipeService
 
     public async Task DeleteRecipeAsync(Guid authorId, Guid recipeId)
     {
+        var recipe = await _recipeRepository.GetRecipeByIdAsync(recipeId);
         var actualAuthorId = await _recipeRepository.GetRecipeAuthorIdAsync(recipeId);
 
         if (actualAuthorId is null)
@@ -95,7 +96,6 @@ public class RecipeService : IRecipeService
         {
             throw new ForbiddenException("You can only delete your own recipes.");
         }
-        var recipe = await _recipeRepository.GetRecipeByIdAsync(recipeId);
         var visibility = recipe.IsPrivate ? "private" : "public";
         var scope = await _recipeRepository.IsInAnyGroupAsync(recipeId) ? "group" : "personal";
         TasteoryMetrics.RecipesCurrent.WithLabels(visibility, scope).Dec();

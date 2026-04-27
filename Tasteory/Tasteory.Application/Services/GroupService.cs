@@ -205,6 +205,7 @@ public class GroupService : IGroupService
         {
             throw new NotFoundException("You are not a member of this group.");
         }
+        var wasInGroup = await _recipeRepository.IsInAnyGroupAsync(recipeId);
 
         var recipe = await _recipeRepository.GetRecipeByIdAsync(recipeId);
         if (recipe is null)
@@ -225,10 +226,11 @@ public class GroupService : IGroupService
         }
 
         await _groupRepository.AddRecipeToGroupAsync(groupId, recipeId);
-        var wasInGroup = await _recipeRepository.IsInAnyGroupAsync(recipeId);
         if (!wasInGroup)
         {
+            recipe = await _recipeRepository.GetRecipeByIdAsync(recipeId);
             var visibility = recipe.IsPrivate ? "private" : "public";
+
             TasteoryMetrics.RecipesCurrent.WithLabels(visibility, "personal").Dec();
             TasteoryMetrics.RecipesCurrent.WithLabels(visibility, "group").Inc();
         }
