@@ -68,7 +68,7 @@ function renderLayout(root) {
                     </button>
                 </div>
             </div>
-            <div class="group-page__tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <div class="group-page__tabs" style="display: flex; gap: 10px;">
                 <button class="search-filters__button group-page__tab-btn is-active" data-tab="recipes" style="flex: 1; height: 50px; font-size: 20px;">Рецепты</button>
                 <button class="search-filters__button group-page__tab-btn" data-tab="members" style="flex: 1; height: 50px; font-size: 20px;">Участники</button>
             </div>

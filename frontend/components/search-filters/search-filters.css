@@ -37,8 +37,10 @@
 }
 
 .search-filters__button {
-	width: 200px;
-	height: 60px;
+	width: auto;
+	padding-left: 20px;
+	padding-right: 20px;
+	height: 40px;
 	border: 1px solid var(--border-color);
 	border-radius: 20px;
 	background: #ffffff;
@@ -65,3 +67,13 @@
 	outline: none;
 }
 
+.search-filters__button.is-active {
+	background-color: #6a852f;
+	color: white;
+}
+
+.search-filters__button.is-active-all {
+	background-color: #f28c50;
+	color: white;
+	border-color: #f28c50;
+}
