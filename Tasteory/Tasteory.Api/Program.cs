@@ -2,6 +2,7 @@ using Amazon.S3;
 using Application.DTO.Responses;
 using Application.Interfaces.Repositories;
 using Application.Interfaces.Services;
+using Application.Metrics;
 using Application.Services;
 using Application.Validation;
 using DotNetEnv;
@@ -128,10 +129,55 @@ using (var scope = app.Services.CreateScope())
         logger.LogInformation("Applying database migrations...");
         dbContext.Database.Migrate();
         logger.LogInformation("Database migrations applied successfully!");
+        
+        // --- Инициализация метрик ---
+        logger.LogInformation("Initializing metrics from database...");
+        
+        var recipeStats = await dbContext.Recipes
+            .Select(r => new { 
+                r.IsPrivate, 
+                InGroup = dbContext.GroupRecipes.Any(gr => gr.RecipeId == r.Id) 
+            })
+            .ToListAsync();
+
+        var combinations = new[] 
+        { 
+            new { Vis = "public", Scp = "personal" },
+            new { Vis = "public", Scp = "group" },
+            new { Vis = "private", Scp = "personal" },
+            new { Vis = "private", Scp = "group" }
+        };
+
+        foreach (var combo in combinations)
+        {
+            var count = recipeStats.Count(x => 
+                (x.IsPrivate ? "private" : "public") == combo.Vis && 
+                (x.InGroup ? "group" : "personal") == combo.Scp);
+            
+            TasteoryMetrics.RecipesCurrent.WithLabels(combo.Vis, combo.Scp).Set(count);
+        }
+
+        var groupsCount = await dbContext.Groups.CountAsync();
+        TasteoryMetrics.GroupsCurrent.Set(groupsCount);
+
+        var favoritesCount = await dbContext.UserFavoriteRecipes.CountAsync();
+        TasteoryMetrics.FavoritesCurrent.Set(favoritesCount);
+
+        var usersCount = await dbContext.Users.CountAsync();
+        TasteoryMetrics.UsersRegisteredTotal.Set(usersCount);
+        
+        var monthAgo = DateTime.UtcNow.AddDays(-7);
+
+        var activeUsers = await dbContext.Users
+            .CountAsync(u => u.LastActivityAt >= monthAgo);
+
+        TasteoryMetrics.ActiveUsers.Set(activeUsers);
+
+        logger.LogInformation("Metrics initialized successfully!");
     }
     catch (Exception ex)
     {
-        logger.LogCritical(ex, "A fatal error occurred while applying database migrations!");
+        logger.LogCritical(ex, "A fatal error occurred while applying database migrations or make metrics!");
         Console.WriteLine($"Could not run migrations: {ex}");
     }
 }

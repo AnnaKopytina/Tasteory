@@ -211,7 +211,7 @@ function renderLayout(root, isGroupContext, editId) {
                 </section>
 
                 <div class="create-actions" style="display:flex; flex-direction:column; gap:10px;">
-                    <button class="create-btn create-btn--submit" type="submit">${editId ? 'Сохранить изменения' : 'Создать'}</button>
+                    <button class="create-btn create-btn--submit" type="submit">${editId ? 'Сохранить изменения' : 'Сохранить рецепт'}</button>
                     ${editId ? `<button class="create-btn" type="button" data-action="delete-recipe" style="background:#f28c50">Удалить рецепт</button>` : ''}
                 </div>
                 <p class="create-status" data-role="status" style="text-align:center; font-weight:bold; margin-top:15px;"></p>

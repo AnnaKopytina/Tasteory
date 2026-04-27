@@ -8,6 +8,7 @@ public class UserEntity
     public string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string? AvatarUrl { get; set; }
+    public DateTime LastActivityAt { get; set; } = DateTime.UtcNow;
     
     public ICollection<RecipeEntity> CreatedRecipes { get; set; } = new List<RecipeEntity>();
     public ICollection<UserGroupEntity> UserGroups { get; set; } = new List<UserGroupEntity>();

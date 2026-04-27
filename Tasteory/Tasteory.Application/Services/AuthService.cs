@@ -45,7 +45,6 @@ public class AuthService : IAuthService
     public async Task<string> LoginAsync(string email, string password)
     {
         var user = await _userRepository.GetByEmailAsync(email);
-        
         if (user is null)
         {
             throw new UnauthorizedAccessException("Invalid Email or Password");
@@ -55,8 +54,8 @@ public class AuthService : IAuthService
         {
             throw new UnauthorizedAccessException("Invalid Email or Password");
         }
-        
-        TasteoryMetrics.ActiveUsers.Inc();
+        user.UpdateActivity();
+        await _userRepository.UpdateAsync(user);
         return _jwtProvider.Generate(user); 
     }
 }

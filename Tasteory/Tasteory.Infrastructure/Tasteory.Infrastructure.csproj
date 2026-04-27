@@ -20,4 +20,8 @@
       <ProjectReference Include="..\Tasteory.Domain\Tasteory.Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Metrics\" />
+    </ItemGroup>
+
 </Project>

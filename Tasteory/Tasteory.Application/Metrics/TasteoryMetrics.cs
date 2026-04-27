@@ -12,8 +12,8 @@ public static class TasteoryMetrics
         .CreateCounter("tasteory_site_traffic_total", "Количество заходов на страницы",
             new CounterConfiguration { LabelNames = new[] { "user_type" } });
 
-    public static readonly Counter UsersRegisteredTotal = Prometheus.Metrics
-        .CreateCounter("tasteory_users_registered_total", "Всего зарегистрированных пользователей");
+    public static readonly Gauge UsersRegisteredTotal = Prometheus.Metrics
+        .CreateGauge("tasteory_users_registered_total", "Всего зарегистрированных пользователей");
 
     public static readonly Gauge GroupsCurrent = Prometheus.Metrics
         .CreateGauge("tasteory_groups_current", "Текущее количество активных групп");
