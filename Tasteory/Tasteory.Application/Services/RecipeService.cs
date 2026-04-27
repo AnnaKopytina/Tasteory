@@ -55,7 +55,7 @@ public class RecipeService : IRecipeService
         var id = await _recipeRepository.CreateRecipeAsync(recipe);
 
         var visibility = request.IsPrivate ? "private" : "public";
-        TasteoryMetrics.RecipesCreatedTotal.WithLabels(visibility).Inc();
+        TasteoryMetrics.RecipesCurrent.WithLabels(visibility, "personal").Inc();
 
         return id;
     }
@@ -95,7 +95,11 @@ public class RecipeService : IRecipeService
         {
             throw new ForbiddenException("You can only delete your own recipes.");
         }
-
+        var recipe = await _recipeRepository.GetRecipeByIdAsync(recipeId);
+        var visibility = recipe.IsPrivate ? "private" : "public";
+        var scope = await _recipeRepository.IsInAnyGroupAsync(recipeId) ? "group" : "personal";
+        TasteoryMetrics.RecipesCurrent.WithLabels(visibility, scope).Dec();
+        
         await _recipeRepository.DeleteRecipeAsync(recipeId);
     }
 
@@ -138,15 +142,15 @@ public class RecipeService : IRecipeService
         var recipe = await _recipeRepository.GetRecipeByIdAsync(recipeId);
 
         if (recipe is null)
-        {
             throw new NotFoundException("Recipe not found.");
-        }
 
         if (recipe.AuthorId != authorId)
-        {
             throw new ForbiddenException("You can edit only your recipes.");
-        }
-
+        
+        var oldVisibility = recipe.IsPrivate ? "private" : "public";
+        var oldScope = await _recipeRepository.IsInAnyGroupAsync(recipeId) ? "group" : "personal";
+        TasteoryMetrics.RecipesCurrent.WithLabels(oldVisibility, oldScope).Dec();
+        
         recipe.UpdateMainInfo(request.Title, request.MainImage, request.MainText,
             request.IsPrivate, request.TimeMinutes, request.BasePortions, request.Tags);
 
@@ -171,6 +175,8 @@ public class RecipeService : IRecipeService
         }
 
         await _recipeRepository.UpdateRecipeAsync(recipe);
+        var newVisibility = request.IsPrivate ? "private" : "public";
+        TasteoryMetrics.RecipesCurrent.WithLabels(newVisibility, oldScope).Inc();
     }
 
     public async Task<(List<RecipeSummaryResponse> Recipes, int TotalCount)> GetFavoritesByUserAsync(Guid userId,

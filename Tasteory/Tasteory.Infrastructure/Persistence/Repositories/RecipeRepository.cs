@@ -35,14 +35,15 @@ public class RecipeRepository : IRecipeRepository
 
     public async Task<Recipe?> GetRecipeByIdAsync(Guid id)
     {
-        var entity = await _context.Recipes
+        return await _context.Recipes
             .AsNoTracking()
+            .Where(r => r.Id == id) 
             .Include(r => r.Steps)
             .Include(r => r.Ingredients)
             .Include(r => r.FavoritedBy)
-            .FirstOrDefaultAsync(r => r.Id == id);
-
-        return entity is null ? null : _mapper.Map<Recipe>(entity);
+            .AsSplitQuery()
+            .ProjectTo<Recipe>(_mapper.ConfigurationProvider)
+            .FirstOrDefaultAsync(); 
     }
 
     public async Task<Guid?> GetRecipeAuthorIdAsync(Guid recipeId)
@@ -56,13 +57,9 @@ public class RecipeRepository : IRecipeRepository
 
     public async Task DeleteRecipeAsync(Guid id)
     {
-        var entity = await _context.Recipes.FindAsync(id);
-
-        if (entity is not null)
-        {
-            _context.Recipes.Remove(entity);
-            await _context.SaveChangesAsync();
-        }
+        await _context.Recipes
+            .Where(r => r.Id == id)
+            .ExecuteDeleteAsync();
     }
 
     public async Task<(List<RecipeSummary> Recipes, int TotalCount)> GetAllPublicAsync(string? searchTerm, int page,
@@ -170,5 +167,11 @@ public class RecipeRepository : IRecipeRepository
             .ToListAsync();
 
         return (items, totalCount);
+    }
+
+    public async Task<bool> IsInAnyGroupAsync(Guid recipeId)
+    {
+        return await _context.GroupRecipes
+            .AnyAsync(gr => gr.RecipeId == recipeId);
     }
 }

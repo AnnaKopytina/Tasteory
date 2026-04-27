@@ -15,4 +15,5 @@ public interface IRecipeRepository
     public Task<List<RecipeSummary>> GetSuggestionsAsync(string query, int limit = 5);
     public Task UpdateRecipeAsync(Recipe recipe);
     public Task<(List<RecipeSummary> Items, int TotalCount)> GetFavoritesByUserIdAsync(Guid userId, int page, int pageSize);
+    public Task<bool> IsInAnyGroupAsync(Guid recipeId);
 }

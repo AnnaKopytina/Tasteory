@@ -29,7 +29,7 @@ public class GroupService : IGroupService
     public async Task<Guid> CreateGroupAsync(Guid userId, string name)
     {
         var id = await _groupRepository.CreateGroupAsync(userId, name);
-        TasteoryMetrics.GroupsCreatedTotal.Inc();
+        TasteoryMetrics.GroupsCurrent.Inc();
         return id;
     }
 
@@ -91,6 +91,7 @@ public class GroupService : IGroupService
         }
 
         await _groupRepository.DeleteGroupAsync(groupId);
+        TasteoryMetrics.GroupsCurrent.Dec();
     }
 
     public async Task<List<GroupMember>> GetGroupMembersAsync(Guid groupId)
@@ -224,6 +225,13 @@ public class GroupService : IGroupService
         }
 
         await _groupRepository.AddRecipeToGroupAsync(groupId, recipeId);
+        var wasInGroup = await _recipeRepository.IsInAnyGroupAsync(recipeId);
+        if (!wasInGroup)
+        {
+            var visibility = recipe.IsPrivate ? "private" : "public";
+            TasteoryMetrics.RecipesCurrent.WithLabels(visibility, "personal").Dec();
+            TasteoryMetrics.RecipesCurrent.WithLabels(visibility, "group").Inc();
+        }
     }
 
     public async Task AddMemberByUsernameAsync(Guid currentUserId, Guid groupId, string userName)

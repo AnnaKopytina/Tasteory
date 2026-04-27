@@ -1,6 +1,7 @@
 using Application.DTO.Requests;
 using Application.DTO.Responses;
 using Application.Interfaces.Services;
+using Application.Metrics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Tasteory.Extensions;
@@ -80,6 +81,8 @@ public class RecipesController : ControllerBase
         [FromQuery] string? searchTerm = null)
     {
         var currentUserId = User.GetUserId();
+        var isGuest = !User.Identity.IsAuthenticated;
+        TasteoryMetrics.SiteTrafficTotal.WithLabels(isGuest ? "guest" : "registered").Inc();
 
         var (recipes, totalCount) = await _recipeService.GetAllPublicAsync(searchTerm, query, currentUserId);
 

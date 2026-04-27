@@ -1,4 +1,5 @@
 ﻿using Application.Interfaces.Repositories;
+using Application.Metrics;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Tasteory.Extensions;
@@ -20,6 +21,7 @@ public class FavoritesController : ControllerBase
     [HttpPost("{recipeId:guid}")]
     public async Task<IActionResult> Add(Guid recipeId)
     {
+        TasteoryMetrics.FavoritesCurrent.Inc();
         await _favoriteRepository.AddAsync(User.GetUserId(), recipeId);
         
         return Ok();
@@ -28,6 +30,7 @@ public class FavoritesController : ControllerBase
     [HttpDelete("{recipeId:guid}")]
     public async Task<IActionResult> Remove(Guid recipeId)
     {
+        TasteoryMetrics.FavoritesCurrent.Dec();
         await _favoriteRepository.RemoveAsync(User.GetUserId(), recipeId);
         
         return NoContent();

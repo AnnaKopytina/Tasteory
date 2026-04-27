@@ -55,7 +55,8 @@ public class AuthService : IAuthService
         {
             throw new UnauthorizedAccessException("Invalid Email or Password");
         }
-
-        return _jwtProvider.Generate(user);
+        
+        TasteoryMetrics.ActiveUsers.Inc();
+        return _jwtProvider.Generate(user); 
     }
 }
