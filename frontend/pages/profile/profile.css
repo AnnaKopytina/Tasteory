@@ -417,26 +417,113 @@
 .profile-edit-modal__buttons .profile-edit-modal__btn-primary {
 	min-width: 120px;
 }
-
-@media (max-width: 640px) {
-	.profile-edit-backdrop {
-		padding: 16px;
+@media (max-width: 768px) {
+	.profile-page {
+		gap: 11px;
 	}
 
-	.profile-edit-modal {
-		padding: 18px;
+	.profile-hero {
+		padding: 20px;
+		display: flex;
+		flex-direction: column;
+		gap: 15px;
+		align-items: flex-start;
 	}
 
-	.profile-edit-modal__avatar-btns {
-		grid-template-columns: 1fr;
+	.profile-hero__left {
+		display: flex;
+		align-items: center;
+		gap: 15px;
 	}
 
-	.profile-edit-modal__buttons {
-		flex-direction: column-reverse;
+	.profile-avatar {
+		width: 64px;
+		height: 64px;
+		flex: 0 0 64px;
+		font-size: 24px;
 	}
 
-	.profile-edit-modal__buttons .profile-edit-modal__btn-primary,
-	.profile-edit-modal__buttons .profile-edit-modal__btn-ghost {
+	.profile-name { font-size: 22px; }
+	.profile-id { font-size: 14px; }
+
+	.profile-actions {
+		display: flex;
 		width: 100%;
+		gap: 8px;
+	}
+
+	.profile-edit-btn {
+		width: auto;
+		height: 38px;
+		min-height: 38px;
+		font-size: 14px;
+		border-radius: 10px;
+	}
+
+	.profile-logout-icon-btn {
+		width: 38px;
+		height: 38px;
+		border-radius: 10px;
+	}
+
+	.profile-tabs {
+		display: flex;
+		justify-content: space-between;
+		gap: 0 !important;
+		background: transparent;
+		padding: 0;
+		margin: 5px 0;
+	}
+
+	.profile-tab-btn {
+		background: transparent !important;
+		border: none !important;
+		box-shadow: none !important;
+		border-radius: 0 !important;
+
+		width: auto;
+		flex: 1;
+		padding: 2px 10px 10px 10px !important;
+		height: auto !important;
+		font-size: 14px;
+		color: #4a5f70;
+		position: relative;
+		font-weight: 500;
+		transition: color 0.2s;
+		margin-bottom: 15px;
+	}
+
+	.profile-tab-btn::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		height: 1px;
+		background-color: #bcbcbc;
+	}
+
+	.profile-tab-btn.is-active {
+		color: #102e3f !important;
+		font-weight: 600 !important;
+	}
+
+	.profile-tab-btn.is-active::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		height: 2px;
+		background-color: #102e3f;
+	}
+
+	.profile-create-group-btn {
+		width: 100%;
+		height: 46px;
+		border-radius: 12px;
+		font-size: 16px;
+		background: var(--color-dark-green);
+		margin-top: 10px;
 	}
 }

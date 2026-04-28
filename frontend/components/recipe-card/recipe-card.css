@@ -42,21 +42,20 @@
     top: 14px;
     right: 14px;
     display: flex;
-    gap: 8px; /* Расстояние между кнопками */
+    gap: 8px;
     align-items: center;
     z-index: 2;
 }
 
-/* Общий стиль для кнопок на карточке (Изменить и Избранное) */
 .recipe-card__btn {
     border: none;
-    background: rgba(20, 47, 61, 0.01); /* Темная подложка для видимости на светлых фото */
+    background: rgba(20, 47, 61, 0.01);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    width: 32px;  /* Унифицированный размер */
+    width: 32px;
     height: 32px;
     border-radius: 8px;
     color: #fefefe;
@@ -79,7 +78,7 @@
 }
 
 .recipe-card__favorite--active {
-    background: rgba(250, 134, 1, 0.85); /* Оранжевый фон при активации (опционально) */
+    background: rgba(250, 134, 1, 0.85);
 }
 
 .recipe-card__favorite {

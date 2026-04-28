@@ -2,12 +2,16 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tasteory</title>
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="/pages/sidebar/sidebar.css">
     <link rel="stylesheet" href="/pages/group/group-modal.css">
 </head>
 <body>
+<header class="mobile-top-bar">
+    <div class="logo">Tasteory</div>
+</header>
 
 <!-- Меню -->
 <aside class="sidebar">
@@ -49,6 +53,32 @@
         </a>
     </nav>
 </aside>
+
+<!-- МОБИЛЬНОЕ НИЖНЕЕ МЕНЮ-->
+<nav class="mobile-bottom-nav">
+    <a href="/main" class="mobile-nav-item active">
+        <span class="icon" data-icon="book"></span>
+        <span class="label">Главная</span>
+    </a>
+    <a href="/groups" class="mobile-nav-item">
+        <span class="icon" data-icon="group"></span>
+        <span class="label">Сообщества</span>
+    </a>
+    <a href="/create" class="mobile-nav-item">
+        <div class="plus-icon-circle">
+            <span class="icon" data-icon="plus"></span>
+        </div>
+        <span class="label">Создать</span>
+    </a>
+    <a href="/favorite" class="mobile-nav-item">
+        <span class="icon" data-icon="favorite"></span>
+        <span class="label">Избранное</span>
+    </a>
+    <a href="/profile" class="mobile-nav-item" id="mobile-profile-link">
+        <span class="icon" data-icon="profile"></span>
+        <span class="label">Профиль</span>
+    </a>
+</nav>
 
 <!-- Динамический контент -->
 <main class="content-area" id="content-root"></main>

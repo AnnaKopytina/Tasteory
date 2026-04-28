@@ -20,6 +20,17 @@ export async function initGroupPage(groupId) {
     if (!root) {
         return;
     }
+
+    console.log("aaaaaa");
+
+    if (!groupId) {
+        await initGroupsList(root);
+    } else {
+        await initSingleGroup(root, groupId);
+    }
+}
+
+async function initSingleGroup(root, groupId) {
     root.innerHTML = '<div class="loader">Загрузка группы...</div>';
     
     try {
@@ -37,6 +48,69 @@ export async function initGroupPage(groupId) {
     } catch (err) {
         renderError(root, err.message);
     }
+}
+
+async function initGroupsList(root) {
+    root.innerHTML = '<div class="loader">Загрузка ваших групп...</div>';
+
+    try {
+        // ИСПРАВЛЕННЫЙ URL: добавляем /users/me/groups
+        const res = await fetch('/api/users/me/groups?page=1&pageSize=50', { credentials: 'include' });
+
+        if (!res.ok) throw new Error('Не удалось загрузить группы');
+
+        const data = await res.json();
+
+        // Твой бэкенд возвращает PagedResponse, поэтому берем data.items
+        const groups = data.items || [];
+
+        renderGroupsListLayout(root, groups);
+    } catch (err) {
+        renderError(root, err.message);
+    }
+}
+
+function renderGroupsListLayout(root, groups) {
+    root.innerHTML = `
+        <section class="group-page">
+            <div class="group-page__header">
+                <h1 class="group-page__title">Мои группы</h1>
+                <button class="create-group-btn" id="create-new-group-btn">+ Создать группу</button>
+            </div>
+            
+            <div class="groups-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin-top: 20px;">
+                ${groups.length === 0
+        ? '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: #7c8a98;">У вас пока нет групп.</p>'
+        : groups.map(g => `
+                        <a href="/group/${g.id}" class="page-card group-card" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 15px; transition: transform 0.2s;">
+                            <div style="width: 50px; height: 50px; background: #f28c50; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px;">
+                                ${g.name[0].toUpperCase()}
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 18px;">${escapeHtml(g.name)}</h3>
+                                <small style="color: #7c8a98;">Нажмите, чтобы открыть</small>
+                            </div>
+                        </a>
+                    `).join('')}
+            </div>
+        </section>
+    `;
+
+    // Клик на создание новой группы (открывает ту же модалку, что и в сайдбаре)
+    const createBtn = root.querySelector('#create-new-group-btn');
+    if (createBtn) {
+        createBtn.onclick = () => {
+            document.getElementById('add-group-btn')?.click();
+        };
+    }
+}
+
+function ensureCSS(href) {
+    if (document.querySelector(`link[href="${href}"]`)) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    document.head.appendChild(link);
 }
 
 async function fetchGroupInitialData(groupId) {
@@ -168,6 +242,7 @@ function handleRecipesResponse(data, gridBox, append, loadCallback) {
 }
 
 export async function openMyRecipesPicker() {
+    ensureCSS('/pages/profile/profile.css');
     const backdrop = createPickerModal();
     document.body.appendChild(backdrop);
     
