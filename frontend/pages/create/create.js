@@ -251,22 +251,38 @@ function fillFormWithData(root, data) {
 function fillIngredientsAndSteps(root, data) {
     const secCont = root.querySelector('[data-role="sections"]');
     const stepCont = root.querySelector('[data-role="steps"]');
-    secCont.innerHTML = ""; 
+    secCont.innerHTML = "";
     stepCont.innerHTML = "";
 
-    const groups = data.ingredients.reduce((acc, ing) => {
-        const s = ing.section || "Основные";
-        if (!acc[s]) {
-            acc[s] = [];
-        }
-        acc[s].push(ing);
-        return acc;
-    }, {});
+    const sortedIngredients = [...data.ingredients]
+        .sort((a, b) => a.sortOrder - b.sortOrder);
 
-    Object.entries(groups).forEach(([name, ings]) => {
-        secCont.insertAdjacentHTML('beforeend', createSectionHtml(name, ings));
+    const sections = [];
+
+    sortedIngredients.forEach(ing => {
+        let section = sections.find(s => s.name === (ing.section || "Основные"));
+
+        if (!section) {
+            section = {
+                name: ing.section || "Основные",
+                items: []
+            };
+            sections.push(section);
+        }
+
+        section.items.push(ing);
     });
-    data.steps.forEach(s => {
+
+    sections.forEach(sec => {
+        secCont.insertAdjacentHTML(
+            'beforeend',
+            createSectionHtml(sec.name, sec.items)
+        );
+    });
+
+    const sortedSteps = [...data.steps].sort((a, b) => a.sortOrder - b.sortOrder);
+
+    sortedSteps.forEach(s => {
         stepCont.insertAdjacentHTML('beforeend', createStepHtml(s));
     });
 }
@@ -417,21 +433,25 @@ async function handleFormSubmit(e, form, isGroupContext, groupId, editId) {
 
 function collectIngredients(form) {
     const ingredients = [];
-    form.querySelectorAll('[data-role="section"]').forEach((sec, sIdx) => {
+    let order = 1;
+
+    form.querySelectorAll('[data-role="section"]').forEach((sec) => {
         const secName = sec.querySelector('[data-field="section-name"]').value || "Основные";
-        sec.querySelectorAll('[data-role="ingredient-row"]').forEach((row, rIdx) => {
+
+        sec.querySelectorAll('[data-role="ingredient-row"]').forEach((row) => {
             const name = row.querySelector('[data-field="name"]').value.trim();
-            if (name) {
-                ingredients.push({
-                    name,
-                    amount: parseFloat(row.querySelector('[data-field="amount"]').value) || 0.1,
-                    measure: row.querySelector('[data-field="unit"]').value || "",
-                    section: secName,
-                    sortOrder: sIdx * 100 + rIdx + 1
-                });
-            }
+            if (!name) return;
+
+            ingredients.push({
+                name,
+                amount: parseFloat(row.querySelector('[data-field="amount"]').value) || 0.1,
+                measure: row.querySelector('[data-field="unit"]').value || "",
+                section: secName,
+                sortOrder: order++
+            });
         });
     });
+
     return ingredients;
 }
 
