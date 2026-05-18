@@ -19,14 +19,27 @@ export async function initFavoritePage() {
 }
 
 function renderFavoriteStructure(root) {
-    root.innerHTML = `
-        <section class="favorite-page">
-            <div class="favorite-page__header page-card">
-                <h1 class="favorite-page__title">Избранное</h1>
-            </div>
-            <div class="favorite-page__feed" id="fav-feed"></div>
-        </section>
-    `;
+    root.replaceChildren();
+
+    const section = document.createElement('section');
+    section.className = 'favorite-page';
+
+    const header = document.createElement('div');
+    header.className = 'favorite-page__header page-card';
+
+    const title = document.createElement('h1');
+    title.className = 'favorite-page__title';
+    title.textContent = 'Избранное';
+
+    const feed = document.createElement('div');
+    feed.className = 'favorite-page__feed';
+    feed.id = 'fav-feed';
+
+    header.appendChild(title);
+    section.appendChild(header);
+    section.appendChild(feed);
+
+    root.appendChild(section);
 }
 
 async function loadFavData(append = false) {
@@ -36,7 +49,10 @@ async function loadFavData(append = false) {
     }
 
     if (!append) {
-        feedContainer.innerHTML = '<div class="loader">Загрузка...</div>';
+        const loader = document.createElement('div');
+        loader.className = 'loader';
+        loader.textContent = 'Загрузка...';
+        feedContainer.replaceChildren(loader);
     }
 
     try {
@@ -56,17 +72,24 @@ async function loadFavData(append = false) {
         processFavItems(items, feedContainer, append);
     } catch (e) {
         console.error(e);
-        feedContainer.innerHTML = '<div class="page-card" style="color:red; text-align:center;">Ошибка загрузки данных</div>';
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'page-card';
+        errorDiv.style.cssText = 'color:red; text-align:center;';
+        errorDiv.textContent = 'Ошибка загрузки данных';
+        feedContainer.replaceChildren(errorDiv);
     }
 }
 
 function processFavItems(items, feedContainer, append) {
     if (!append) {
-        feedContainer.innerHTML = '';
+        feedContainer.replaceChildren();
     }
 
     if (!append && items.length === 0) {
-        feedContainer.innerHTML = '<div class="favorite-page__empty page-card">Здесь пока пусто. Сохраняйте рецепты, чтобы они появились здесь!</div>';
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'favorite-page__empty page-card';
+        emptyMsg.textContent = 'Здесь пока пусто. Сохраняйте рецепты, чтобы они появились здесь!';
+        feedContainer.appendChild(emptyMsg);
     } else {
         const mapped = items.map(r => ({
             ...r,

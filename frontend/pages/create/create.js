@@ -1,13 +1,41 @@
-import { RECIPE_FILTERS } from '../../core/recipe-filters.js';
+import {RECIPE_FILTERS} from '../../core/recipe-filters.js';
 
 const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 
 let selectedTags = new Set();
 
-async function uploadMedia(file) {
-    if (!file) {
-        return null;
+export function el(tag, attrs = {}, ...children) {
+    const element = document.createElement(tag);
+    for (const [key, value] of Object.entries(attrs)) {
+        if (key === 'className') element.className = value;
+        else if (key === 'dataset') {
+            for (const [dKey, dVal] of Object.entries(value)) element.dataset[dKey] = dVal;
+        } else if (key === 'style') Object.assign(element.style, value);
+        else if (key === 'textContent') element.textContent = value;
+        else if (key === 'value') element.value = value;
+        else if (typeof value === 'boolean') {
+            if (value) element.setAttribute(key, '');
+        } else element.setAttribute(key, value);
     }
+    children.forEach(child => {
+        if (!child) return;
+        if (typeof child === 'string' || typeof child === 'number') {
+            element.appendChild(document.createTextNode(child));
+        } else if (child instanceof Node) {
+            element.appendChild(child);
+        }
+    });
+    return element;
+}
+
+function getDeleteIconNode() {
+    const iconStr = window.AppIcons?.render?.('delete', 'icon-btn__icon') || '🗑';
+    if (iconStr === '🗑') return document.createTextNode('🗑');
+    return new DOMParser().parseFromString(iconStr, 'text/html').body.firstChild;
+}
+
+async function uploadMedia(file) {
+    if (!file) return null;
     const formData = new FormData();
     formData.append('file', file);
     const res = await fetch('/api/media/upload', {
@@ -15,39 +43,23 @@ async function uploadMedia(file) {
         body: formData,
         credentials: 'include'
     });
-    if (!res.ok) {
-        throw new Error('Ошибка загрузки фото');
-    }
+    if (!res.ok) throw new Error('Ошибка загрузки фото');
     const data = await res.json();
     return data.url || data.path;
 }
 
-function renderDeleteIcon() {
-    return window.AppIcons?.render?.('delete', 'icon-btn__icon') || '🗑';
-}
-
 function updateImageStatusUI(container, hasImage) {
-    if (!container) {
-        return;
-    }
+    if (!container) return;
     const uploadBtn = container.querySelector('[data-action*="upload-"]');
     const deleteBtn = container.querySelector('[data-action*="clear-"]');
     const statusSpan = container.closest('.create-step__media')?.querySelector('.create-file-name');
 
     if (hasImage) {
-        if (uploadBtn) {
-            uploadBtn.textContent = "Изменить фото";
-        }
-        if (deleteBtn) {
-            deleteBtn.classList.remove('is-hidden');
-        }
+        if (uploadBtn) uploadBtn.textContent = "Изменить фото";
+        if (deleteBtn) deleteBtn.classList.remove('is-hidden');
     } else {
-        if (uploadBtn) {
-            uploadBtn.textContent = "Загрузить фото";
-        }
-        if (deleteBtn) {
-            deleteBtn.classList.add('is-hidden');
-        }
+        if (uploadBtn) uploadBtn.textContent = "Загрузить фото";
+        if (deleteBtn) deleteBtn.classList.add('is-hidden');
         if (statusSpan) {
             statusSpan.textContent = "Нет фото";
             statusSpan.dataset.currentUrl = "";
@@ -56,72 +68,145 @@ function updateImageStatusUI(container, hasImage) {
 }
 
 function renderActiveTags(container) {
-    container.innerHTML = Array.from(selectedTags).map(tagId => {
+    container.replaceChildren();
+    selectedTags.forEach(tagId => {
         const label = RECIPE_FILTERS.find(f => f.id === tagId)?.label || tagId;
-        return `
-            <div class="tag-chip" style="display: inline-flex; align-items: center; background: #e9eef2; padding: 5px 12px; border-radius: 20px; font-size: 14px; gap: 8px; color: #102e3f;">
-                ${label}
-                <span data-action="remove-tag" data-id="${tagId}" style="cursor: pointer; font-weight: bold; color: #f28c50;">&times;</span>
-            </div>
-        `;
-    }).join('');
+        const chip = el('div', {
+                className: 'tag-chip',
+                style: {
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: '#e9eef2',
+                    padding: '5px 12px',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    gap: '8px',
+                    color: '#102e3f'
+                }
+            },
+            label,
+            el('span', {
+                dataset: {action: 'remove-tag', id: tagId},
+                style: {cursor: 'pointer', fontWeight: 'bold', color: '#f28c50'},
+                textContent: '×'
+            })
+        );
+        container.appendChild(chip);
+    });
 }
 
-function createIngredientRowHtml(ing = null) {
-    return `
-        <div class="create-row create-ingredient-row" data-role="ingredient-row">
-            <input class="create-input" type="text" placeholder="Ингредиент" data-field="name" value="${ing?.name || ''}" />
-            <input class="create-input create-input--small" type="number" step="0.1" placeholder="Кол-во" data-field="amount" value="${ing?.amount || ''}" />
-            <input class="create-input create-input--small" type="text" placeholder="Мера" data-field="unit" value="${ing?.measure || ''}" />
-            <button class="icon-btn" type="button" data-action="remove-ingredient">${renderDeleteIcon()}</button>
-        </div>
-    `;
+function createIngredientRowNode(ing = null) {
+    return el('div', {className: 'create-row create-ingredient-row', dataset: {role: 'ingredient-row'}},
+        el('input', {
+            className: 'create-input',
+            type: 'text',
+            placeholder: 'Ингредиент',
+            dataset: {field: 'name'},
+            value: ing?.name || ''
+        }),
+        el('input', {
+            className: 'create-input create-input--small',
+            type: 'number',
+            step: '0.1',
+            placeholder: 'Кол-во',
+            dataset: {field: 'amount'},
+            value: ing?.amount || ''
+        }),
+        el('input', {
+            className: 'create-input create-input--small',
+            type: 'text',
+            placeholder: 'Мера',
+            dataset: {field: 'unit'},
+            value: ing?.measure || ''
+        }),
+        el('button', {
+            className: 'icon-btn',
+            type: 'button',
+            dataset: {action: 'remove-ingredient'}
+        }, getDeleteIconNode())
+    );
 }
 
-function createSectionHtml(name = "", ings = []) {
-    const rows = ings.length > 0 ? ings.map(i => createIngredientRowHtml(i)).join('') : createIngredientRowHtml();
-    return `
-        <article class="create-section" data-role="section">
-            <div class="create-section__head">
-                <input class="create-input" type="text" placeholder="Название секции" data-field="section-name" value="${name}" />
-                <button class="icon-btn" type="button" data-action="remove-section">${renderDeleteIcon()}</button>
-            </div>
-            <div class="create-ingredients" data-role="ingredients">${rows}</div>
-            <button class="create-btn create-btn--small" type="button" data-action="add-ingredient">+ Ингредиент</button>
-        </article>
-    `;
+function createSectionNode(name = "", ings = []) {
+    const ingredientsContainer = el('div', {className: 'create-ingredients', dataset: {role: 'ingredients'}});
+    if (ings.length > 0) {
+        ings.forEach(i => ingredientsContainer.appendChild(createIngredientRowNode(i)));
+    } else {
+        ingredientsContainer.appendChild(createIngredientRowNode());
+    }
+
+    return el('article', {className: 'create-section', dataset: {role: 'section'}},
+        el('div', {className: 'create-section__head'},
+            el('input', {
+                className: 'create-input',
+                type: 'text',
+                placeholder: 'Название секции',
+                dataset: {field: 'section-name'},
+                value: name
+            }),
+            el('button', {
+                className: 'icon-btn',
+                type: 'button',
+                dataset: {action: 'remove-section'}
+            }, getDeleteIconNode())
+        ),
+        ingredientsContainer,
+        el('button', {
+            className: 'create-btn create-btn--small',
+            type: 'button',
+            dataset: {action: 'add-ingredient'},
+            textContent: '+ Ингредиент'
+        })
+    );
 }
 
-function createStepHtml(step = null) {
-    return `
-        <article class="create-step" data-role="step">
-            <div class="create-step__head">
-                <textarea class="create-input create-textarea" rows="3" placeholder="Описание шага" data-field="description">${step?.content || ''}</textarea>
-                <button class="icon-btn" type="button" data-action="remove-step">${renderDeleteIcon()}</button>
-            </div>
-            <div class="create-step__media">
-                <div class="create-image-actions" data-role="image-container">
-                    <button class="create-btn create-btn--small" type="button" data-action="upload-step-photo">
-                        ${step?.mediaUrl ? 'Изменить фото' : 'Загрузить фото'}
-                    </button>
-                    <button class="create-btn create-btn--small ${step?.mediaUrl ? '' : 'is-hidden'}" type="button" data-action="clear-step-photo" style="background:#7c8a98">
-                        Удалить фото
-                    </button>
-                </div>
-                <span class="create-file-name" data-role="step-file-name" data-current-url="${step?.mediaUrl || ''}">
-                    ${step?.mediaUrl ? 'Фото загружено' : 'Нет фото'}
-                </span>
-                <input type="file" accept="image/*" class="create-hidden-input" data-role="step-file-input" />
-            </div>
-        </article>
-    `;
+function createStepNode(step = null) {
+    const hasMedia = !!step?.mediaUrl;
+    return el('article', {className: 'create-step', dataset: {role: 'step'}},
+        el('div', {className: 'create-step__head'},
+            el('textarea', {
+                className: 'create-input create-textarea',
+                rows: '3',
+                placeholder: 'Описание шага',
+                dataset: {field: 'description'},
+                value: step?.content || ''
+            }),
+            el('button', {className: 'icon-btn', type: 'button', dataset: {action: 'remove-step'}}, getDeleteIconNode())
+        ),
+        el('div', {className: 'create-step__media'},
+            el('div', {className: 'create-image-actions', dataset: {role: 'image-container'}},
+                el('button', {
+                    className: 'create-btn create-btn--small',
+                    type: 'button',
+                    dataset: {action: 'upload-step-photo'},
+                    textContent: hasMedia ? 'Изменить фото' : 'Загрузить фото'
+                }),
+                el('button', {
+                    className: `create-btn create-btn--small ${hasMedia ? '' : 'is-hidden'}`,
+                    type: 'button',
+                    dataset: {action: 'clear-step-photo'},
+                    style: {background: '#7c8a98'},
+                    textContent: 'Удалить фото'
+                })
+            ),
+            el('span', {
+                className: 'create-file-name',
+                dataset: {role: 'step-file-name', currentUrl: step?.mediaUrl || ''},
+                textContent: hasMedia ? 'Фото загружено' : 'Нет фото'
+            }),
+            el('input', {
+                type: 'file',
+                accept: 'image/*',
+                className: 'create-hidden-input',
+                dataset: {role: 'step-file-input'}
+            })
+        )
+    );
 }
 
 export async function initCreatePage(params) {
     const root = document.getElementById('content-root');
-    if (!root) {
-        return;
-    }
+    if (!root) return;
 
     const editId = params?.get('editId');
     const groupId = params?.get('groupId');
@@ -148,80 +233,191 @@ async function loadRecipeForEdit(root, editId) {
 }
 
 function renderLayout(root, isGroupContext, editId) {
-    root.innerHTML = `
-        <section class="create-page">
-            <h1 class="create-page__title">${editId ? 'Редактировать рецепт' : (isGroupContext ? 'Рецепт для группы' : 'Создать рецепт')}</h1>
-            <form class="create-form" novalidate>
-                <section class="create-block">
-                    <input class="create-input" type="text" placeholder="Название рецепта" data-field="title" />
-                    <input class="create-input" type="number" placeholder="Время (мин)" data-field="cook-time" />
-                    
-                    <div class="create-tags-section" style="margin: 10px 0 20px 0;">
-                        <p style="font-size: 14px; font-weight: 600; color: #4a5f70; margin-bottom: 8px;">Категории</p>
-                        <div id="selected-tags-container" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
-                        
-                        <div style="position: relative; display: inline-block;">
-                            <button type="button" class="create-btn create-btn--small" data-action="toggle-tags-popup">+ Категория</button>
-                            <div id="tags-popup" class="is-hidden" style="position: absolute; top: 100%; left: 0; background: white; border: 1px solid #d8dde4; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); z-index: 10; padding: 10px; width: 200px; display: grid; gap: 4px; margin-top: 5px;">
-                                ${RECIPE_FILTERS.map(f => `
-                                    <button type="button" data-action="add-tag" data-id="${f.id}" class="group-page__menu-item" style="padding: 8px; font-size: 14px; border-radius: 6px;">${f.label}</button>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
+    root.replaceChildren();
 
-                    <div class="create-row create-row--split" style="align-items: flex-start;">
-                        <div class="create-step__media" style="flex-grow:1; background:none; padding:0; border:none;">
-                            <div class="create-image-actions" data-role="image-container">
-                                <button class="create-btn create-btn--small" type="button" data-action="upload-cover-photo">Загрузить фото</button>
-                                <button class="create-btn create-btn--small is-hidden" type="button" data-action="clear-cover-photo" style="background:#7c8a98">Удалить фото</button>
-                            </div>
-                            <span class="create-file-name" data-role="cover-file-name" data-current-url="">Нет фото</span>
-                            <input type="file" accept="image/*" class="create-hidden-input" data-role="cover-input" />
-                        </div>
-                        
-                        <div style="${isGroupContext ? 'display:none' : ''}">
-                            <select class="create-input" data-field="is-private">
-                                <option value="false">Публичный</option>
-                                <option value="true">Приватный</option>
-                            </select>
-                        </div>
-                        ${isGroupContext ? '<div class="create-input" style="background:#f5f5f5; display:flex; align-items:center; color:#666; height:45px">🔒 Групповой</div>' : ''}
-                    </div>
-                </section>
+    const titleText = editId ? 'Редактировать рецепт' : (isGroupContext ? 'Рецепт для группы' : 'Создать рецепт');
+    const popupItems = RECIPE_FILTERS.map(f =>
+        el('button', {
+            type: 'button',
+            dataset: {action: 'add-tag', id: f.id},
+            className: 'group-page__menu-item',
+            style: {padding: '8px', fontSize: '14px', borderRadius: '6px'},
+            textContent: f.label
+        })
+    );
 
-                <section class="create-block">
-                    <h2 class="create-block__title">Ингредиенты</h2>
-                    <div class="create-servings">
-                        <span>Количество порций:</span>
-                        <div class="create-counter">
-                            <button type="button" data-action="dec-servings">-</button>
-                            <input type="number" value="1" data-role="servings-value" readonly />
-                            <button type="button" data-action="inc-servings">+</button>
-                        </div>
-                    </div>
-                    <div class="create-sections" data-role="sections"></div>
-                    <button class="create-btn create-btn--center" type="button" data-action="add-section">+ Секция</button>
-                </section>
+    const tagsPopup = el('div', {
+        id: 'tags-popup',
+        className: 'is-hidden',
+        style: {
+            position: 'absolute',
+            top: '100%',
+            left: '0',
+            background: 'white',
+            border: '1px solid #d8dde4',
+            borderRadius: '12px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+            zIndex: '10',
+            padding: '10px',
+            width: '200px',
+            display: 'grid',
+            gap: '4px',
+            marginTop: '5px'
+        }
+    }, ...popupItems);
 
-                <section class="create-block">
-                    <h2 class="create-block__title">Шаги</h2>
-                    <div class="create-steps" data-role="steps"></div>
-                    <button class="create-btn create-btn--center" type="button" data-action="add-step">+ Шаг</button>
-                </section>
+    const tagsSection = el('div', {className: 'create-tags-section', style: {margin: '10px 0 20px 0'}},
+        el('p', {
+            style: {fontSize: '14px', fontWeight: '600', color: '#4a5f70', marginBottom: '8px'},
+            textContent: 'Категории'
+        }),
+        el('div', {
+            id: 'selected-tags-container',
+            style: {display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px'}
+        }),
+        el('div', {style: {position: 'relative', display: 'inline-block'}},
+            el('button', {
+                type: 'button',
+                className: 'create-btn create-btn--small',
+                dataset: {action: 'toggle-tags-popup'},
+                textContent: '+ Категория'
+            }),
+            tagsPopup
+        )
+    );
+    const privacySelect = el('div', {style: {display: isGroupContext ? 'none' : 'block'}},
+        el('select', {className: 'create-input', dataset: {field: 'is-private'}},
+            el('option', {value: 'false', textContent: 'Публичный'}),
+            el('option', {value: 'true', textContent: 'Приватный'})
+        )
+    );
 
-                <div class="create-actions" style="display:flex; flex-direction:column; gap:10px;">
-                    <button class="create-btn create-btn--submit" type="submit">${editId ? 'Сохранить изменения' : 'Сохранить рецепт'}</button>
-                    ${editId ? `<button class="create-btn" type="button" data-action="delete-recipe" style="background:#f28c50">Удалить рецепт</button>` : ''}
-                </div>
-                <p class="create-status" data-role="status" style="text-align:center; font-weight:bold; margin-top:15px;"></p>
-            </form>
-        </section>
-    `;
+    const groupBadge = isGroupContext ? el('div', {
+        className: 'create-input',
+        style: {background: '#f5f5f5', display: 'flex', alignItems: 'center', color: '#666', height: '45px'},
+        textContent: '🔒 Групповой'
+    }) : null;
+    const block1 = el('section', {className: 'create-block'},
+        el('input', {
+            className: 'create-input',
+            type: 'text',
+            placeholder: 'Название рецепта',
+            dataset: {field: 'title'}
+        }),
+        el('input', {
+            className: 'create-input',
+            type: 'number',
+            placeholder: 'Время (мин)',
+            dataset: {field: 'cook-time'}
+        }),
+        tagsSection,
+        el('div', {className: 'create-row create-row--split', style: {alignItems: 'flex-start'}},
+            el('div', {
+                    className: 'create-step__media',
+                    style: {flexGrow: '1', background: 'none', padding: '0', border: 'none'}
+                },
+                el('div', {className: 'create-image-actions', dataset: {role: 'image-container'}},
+                    el('button', {
+                        className: 'create-btn create-btn--small',
+                        type: 'button',
+                        dataset: {action: 'upload-cover-photo'},
+                        textContent: 'Загрузить фото'
+                    }),
+                    el('button', {
+                        className: 'create-btn create-btn--small is-hidden',
+                        type: 'button',
+                        dataset: {action: 'clear-cover-photo'},
+                        style: {background: '#7c8a98'},
+                        textContent: 'Удалить фото'
+                    })
+                ),
+                el('span', {
+                    className: 'create-file-name',
+                    dataset: {role: 'cover-file-name', currentUrl: ''},
+                    textContent: 'Нет фото'
+                }),
+                el('input', {
+                    type: 'file',
+                    accept: 'image/*',
+                    className: 'create-hidden-input',
+                    dataset: {role: 'cover-input'}
+                })
+            ),
+            privacySelect,
+            groupBadge
+        )
+    );
+
+    const block2 = el('section', {className: 'create-block'},
+        el('h2', {className: 'create-block__title', textContent: 'Ингредиенты'}),
+        el('div', {className: 'create-servings'},
+            el('span', {textContent: 'Количество порций:'}),
+            el('div', {className: 'create-counter'},
+                el('button', {type: 'button', dataset: {action: 'dec-servings'}, textContent: '-'}),
+                el('input', {type: 'number', value: '1', dataset: {role: 'servings-value'}, readOnly: true}),
+                el('button', {type: 'button', dataset: {action: 'inc-servings'}, textContent: '+'})
+            )
+        ),
+        el('div', {className: 'create-sections', dataset: {role: 'sections'}}),
+        el('button', {
+            className: 'create-btn create-btn--center',
+            type: 'button',
+            dataset: {action: 'add-section'},
+            textContent: '+ Секция'
+        })
+    );
+
+    const block3 = el('section', {className: 'create-block'},
+        el('h2', {className: 'create-block__title', textContent: 'Шаги'}),
+        el('div', {className: 'create-steps', dataset: {role: 'steps'}}),
+        el('button', {
+            className: 'create-btn create-btn--center',
+            type: 'button',
+            dataset: {action: 'add-step'},
+            textContent: '+ Шаг'
+        })
+    );
+
+    const actionsDiv = el('div', {
+            className: 'create-actions',
+            style: {display: 'flex', flexDirection: 'column', gap: '10px'}
+        },
+        el('button', {
+            className: 'create-btn create-btn--submit',
+            type: 'submit',
+            textContent: editId ? 'Сохранить изменения' : 'Сохранить рецепт'
+        })
+    );
+
+    if (editId) {
+        actionsDiv.appendChild(el('button', {
+            className: 'create-btn',
+            type: 'button',
+            dataset: {action: 'delete-recipe'},
+            style: {background: '#f28c50'},
+            textContent: 'Удалить рецепт'
+        }));
+    }
+
+    const form = el('form', {className: 'create-form', noValidate: true},
+        block1, block2, block3, actionsDiv,
+        el('p', {
+            className: 'create-status',
+            dataset: {role: 'status'},
+            style: {textAlign: 'center', fontWeight: 'bold', marginTop: '15px'}
+        })
+    );
+
+    const page = el('section', {className: 'create-page'},
+        el('h1', {className: 'create-page__title', textContent: titleText}),
+        form
+    );
+
+    root.appendChild(page);
 
     if (!editId) {
-        root.querySelector('[data-role="sections"]').insertAdjacentHTML('beforeend', createSectionHtml());
-        root.querySelector('[data-role="steps"]').insertAdjacentHTML('beforeend', createStepHtml());
+        root.querySelector('[data-role="sections"]').appendChild(createSectionNode());
+        root.querySelector('[data-role="steps"]').appendChild(createStepNode());
     }
 }
 
@@ -251,22 +447,17 @@ function fillFormWithData(root, data) {
 function fillIngredientsAndSteps(root, data) {
     const secCont = root.querySelector('[data-role="sections"]');
     const stepCont = root.querySelector('[data-role="steps"]');
-    secCont.innerHTML = "";
-    stepCont.innerHTML = "";
+    secCont.replaceChildren();
+    stepCont.replaceChildren();
 
-    const sortedIngredients = [...data.ingredients]
-        .sort((a, b) => a.sortOrder - b.sortOrder);
-
+    const sortedIngredients = [...data.ingredients].sort((a, b) => a.sortOrder - b.sortOrder);
     const sections = [];
 
     sortedIngredients.forEach(ing => {
         let section = sections.find(s => s.name === (ing.section || "Основные"));
 
         if (!section) {
-            section = {
-                name: ing.section || "Основные",
-                items: []
-            };
+            section = {name: ing.section || "Основные", items: []};
             sections.push(section);
         }
 
@@ -274,16 +465,13 @@ function fillIngredientsAndSteps(root, data) {
     });
 
     sections.forEach(sec => {
-        secCont.insertAdjacentHTML(
-            'beforeend',
-            createSectionHtml(sec.name, sec.items)
-        );
+        secCont.appendChild(createSectionNode(sec.name, sec.items));
     });
 
     const sortedSteps = [...data.steps].sort((a, b) => a.sortOrder - b.sortOrder);
 
     sortedSteps.forEach(s => {
-        stepCont.insertAdjacentHTML('beforeend', createStepHtml(s));
+        stepCont.appendChild(createStepNode(s));
     });
 }
 
@@ -305,9 +493,8 @@ function setupEventListeners(root, isGroupContext, groupId, editId) {
 
 async function handleFormClick(e, root, form, editId) {
     const btn = e.target.closest('[data-action]');
-    if (!btn) {
-        return;
-    }
+    if (!btn) return;
+
     const action = btn.dataset.action;
     const tagsContainer = root.querySelector('#selected-tags-container');
     const tagsPopup = root.querySelector('#tags-popup');
@@ -343,10 +530,10 @@ async function handleFormClick(e, root, form, editId) {
         inp.value = action === 'inc-servings' ? Math.min(val + 1, 99) : Math.max(val - 1, 1);
     }
     if (action === 'add-section') {
-        root.querySelector('[data-role="sections"]').insertAdjacentHTML('beforeend', createSectionHtml());
+        root.querySelector('[data-role="sections"]').appendChild(createSectionNode());
     }
     if (action === 'add-step') {
-        root.querySelector('[data-role="steps"]').insertAdjacentHTML('beforeend', createStepHtml());
+        root.querySelector('[data-role="steps"]').appendChild(createStepNode());
     }
     if (action === 'remove-section') {
         btn.closest('[data-role="section"]').remove();
@@ -355,7 +542,7 @@ async function handleFormClick(e, root, form, editId) {
         btn.closest('[data-role="step"]').remove();
     }
     if (action === 'add-ingredient') {
-        btn.closest('[data-role="section"]').querySelector('[data-role="ingredients"]').insertAdjacentHTML('beforeend', createIngredientRowHtml());
+        btn.closest('[data-role="section"]').querySelector('[data-role="ingredients"]').appendChild(createIngredientRowNode());
     }
     if (action === 'remove-ingredient') {
         btn.closest('[data-role="ingredient-row"]').remove();
@@ -417,7 +604,12 @@ async function handleFormSubmit(e, form, isGroupContext, groupId, editId) {
         if (res.ok) {
             const created = await res.json().catch(() => ({}));
             if (!editId && isGroupContext && created.id) {
-                await fetch(`/api/groups/${groupId}/recipes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(created.id), credentials: 'include' });
+                await fetch(`/api/groups/${groupId}/recipes`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(created.id),
+                    credentials: 'include'
+                });
             }
             statusEl.textContent = '✅ Готово';
             setTimeout(() => window.AppRouter.navigate(isGroupContext ? `/group/${groupId}` : '/main'), 1000);

@@ -1,6 +1,7 @@
 import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
 import { SearchFilters } from '../../components/search-filters/search-filters.js';
 import { RECIPE_FILTERS, createRecipeFiltersState } from '../../core/recipe-filters.js';
+import { el } from '../create/create.js';
 
 const PAGE_SIZE = 4;
 const mainState = {
@@ -33,7 +34,7 @@ export async function initMainPage() {
     const loadData = async (append = false) => {
         if (!append) {
             mainState.currentPage = 1;
-            feedContainer.innerHTML = '<div class="loader">Загрузка...</div>';
+            feedContainer.replaceChildren(el('div', {className: 'loader', textContent: 'Загрузка...'}));
         }
 
         const url = syncUrlAndGetApiRoute();
@@ -44,36 +45,12 @@ export async function initMainPage() {
             const data = await response.json();
             handleMainResponse(data, feedContainer, append, loadData);
         } catch (error) {
-            feedContainer.innerHTML = '<p style="color:red">Ошибка загрузки рецептов.</p>';
+            feedContainer.replaceChildren(el('p', {style: {color: 'red'}, textContent: 'Ошибка загрузки рецептов.'}));
         }
     };
 
     setupSearchFilters(controlsContainer, loadData);
     await loadData();
-}
-
-function updateBrowserAndGetApiUrl(isPagination = false) {
-    const baseUrl = window.location.pathname;
-    const params = new URLSearchParams();
-
-    if (mainState.recipeFilters.searchValue) {
-        params.set('searchTerm', mainState.recipeFilters.searchValue);
-    }
-
-    mainState.recipeFilters.activeFilters.forEach(tag => {
-        params.append('tags', tag);
-    });
-
-    if (mainState.currentPage > 1) {
-        params.set('page', mainState.currentPage);
-    }
-
-    const queryString = params.toString();
-    const newBrowserUrl = queryString ? `${baseUrl}?${queryString}` : baseUrl;
-
-    window.history.pushState(null, '', newBrowserUrl);
-
-    return `/api/recipes?${params.toString()}&pageSize=8`;
 }
 
 function updatePageTitle() {
@@ -120,11 +97,11 @@ function handleMainResponse(data, feedContainer, append, loadCallback) {
     const items = data.items || data.Items || [];
 
     if (!append) {
-        feedContainer.innerHTML = '';
+        feedContainer.replaceChildren();
     }
 
     if (!append && items.length === 0) {
-        feedContainer.innerHTML = '<p class="main-page__empty">Ничего не найдено.</p>';
+        feedContainer.replaceChildren(el('p', {className: 'main-page__empty', textContent: 'Ничего не найдено.'}));
         const oldBtn = document.getElementById('load-more-main');
         if (oldBtn) {
             oldBtn.remove();
@@ -133,7 +110,7 @@ function handleMainResponse(data, feedContainer, append, loadCallback) {
         const mapped = mapIncomingRecipes(items);
         const temp = document.createElement('div');
         RecipeCard.renderRecipeCards(mapped, temp);
-        
+
         while (temp.firstChild) {
             feedContainer.appendChild(temp.firstChild);
         }
@@ -167,9 +144,9 @@ function renderMainPaginationButton(feedContainer, loadCallback) {
             box-shadow: 0 4px 12px rgba(106, 133, 47, 0.2);
             font-family: inherit;
         `;
-        
+
         btn.textContent = 'Показать ещё';
-        
+
         btn.onmouseover = () => {
             btn.style.backgroundColor = '#556b26';
         };
@@ -195,25 +172,24 @@ function setupSearchFilters(container, loadCallback) {
         filters: RECIPE_FILTERS,
         searchValue: mainState.recipeFilters.searchValue,
         activeFilters: Array.from(mainState.recipeFilters.activeFilters),
-        onSearch: (value) => { 
-            mainState.recipeFilters.searchValue = value; 
-            loadCallback(); 
+        onSearch: (value) => {
+            mainState.recipeFilters.searchValue = value;
+            loadCallback();
         },
-        onFilterToggle: (_, __, activeFilters) => { 
-            mainState.recipeFilters.activeFilters = new Set(activeFilters); 
-            loadCallback(); 
+        onFilterToggle: (_, __, activeFilters) => {
+            mainState.recipeFilters.activeFilters = new Set(activeFilters);
+            loadCallback();
         }
     });
 }
 
 function renderMainLayout(root) {
-    root.innerHTML = `
-        <section class="main-page">
-            <div class="main-page__controls"></div>
-            <h1 id="main-title">Все рецепты</h1>
-            <div class="main-page__feed"></div>
-        </section>
-    `;
+    const section = el('section', {className: 'main-page'},
+        el('div', {className: 'main-page__controls'}),
+        el('h1', {id: 'main-title', textContent: 'Все рецепты'}),
+        el('div', {className: 'main-page__feed'})
+    );
+    root.replaceChildren(section);
 }
 
 function mapIncomingRecipes(items) {
