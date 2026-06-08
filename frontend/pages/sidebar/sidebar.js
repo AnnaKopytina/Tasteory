@@ -1,3 +1,5 @@
+import { GroupService } from '../../services/group-service.js';
+
 const renderIcon = window.AppIcons?.render;
 
 function createIcon(iconName, className = '') {
@@ -30,14 +32,6 @@ const toggleGroupsBtn = document.getElementById('toggle-groups');
 const addGroupBtn = document.getElementById('add-group-btn');
 const navGroupContainer = document.querySelector('.nav-group');
 
-async function fetchGroupsData() {
-    const response = await fetch('/api/users/me/groups?page=1&pageSize=50', {
-        method: 'GET',
-        credentials: 'include'
-    });
-    if (!response.ok) throw new Error('Ошибка сети');
-    return await response.json();
-}
 
 async function loadAndRenderGroups() {
     if (!groupsList) return;
@@ -50,7 +44,7 @@ async function loadAndRenderGroups() {
     groupsList.replaceChildren(loader);
 
     try {
-        const data = await fetchGroupsData();
+        const data = await GroupService.getMyGroups(1, 50);
         const groupsData = data.items || [];
 
         groupsList.replaceChildren();

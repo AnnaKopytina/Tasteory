@@ -1,3 +1,5 @@
+import { GroupService } from '../../services/group-service.js';
+
 (() => {
     const escapeHtml = window.AppUtils?.escapeHtml || ((value) => {
         return String(value)
@@ -111,29 +113,20 @@
         showStatus(statusElement, 'Создаем группу...');
 
         try {
-            const res = await fetch('/api/groups', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: groupName }),
-                credentials: 'include'
-            });
+            const data = await GroupService.create(groupName);
 
-            if (res.ok) {
-                const data = await res.json();
-                if (typeof options.onCreated === 'function') {
-                    options.onCreated();
-                }
-                window.dispatchEvent(new CustomEvent('groups:changed'));
-                if (window.AppRouter) {
-                    window.AppRouter.navigate(`/group/${data.id}`);
-                }
-                closeCallback();
-            } else {
-                showStatus(statusElement, 'Не удалось создать группу. Проверьте имя.', true);
+            if (typeof options.onCreated === 'function') {
+                options.onCreated();
             }
+            window.dispatchEvent(new CustomEvent('groups:changed'));
+            if (window.AppRouter) {
+                window.AppRouter.navigate(`/group/${data.id}`);
+            }
+            closeCallback();
+
         } catch (error) {
             console.error(error);
-            showStatus(statusElement, 'Ошибка сети. Попробуйте еще раз.', true);
+            showStatus(statusElement, error.message || 'Не удалось создать группу. Проверьте имя.', true);
         } finally {
             submitBtn.disabled = false;
         }
@@ -152,32 +145,20 @@
         showStatus(statusElement, 'Проверяем код...');
 
         try {
-            const res = await fetch('/api/groups/join', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ inviteCode: inviteCode }),
-                credentials: 'include'
-            });
+            const data = await GroupService.join(inviteCode);
 
-            if (res.ok) {
-                const data = await res.json();
-                if (typeof options.onCreated === 'function') {
-                    options.onCreated();
-                }
-                window.dispatchEvent(new CustomEvent('groups:changed'));
-                if (window.AppRouter) {
-                    window.AppRouter.navigate(`/group/${data.groupId}`);
-                }
-                closeCallback();
-            } else {
-                const err = await res.json().catch(() => {
-                    return {};
-                });
-                showStatus(statusElement, err.message || 'Недействительный или просроченный код.', true);
+            if (typeof options.onCreated === 'function') {
+                options.onCreated();
             }
+            window.dispatchEvent(new CustomEvent('groups:changed'));
+            if (window.AppRouter) {
+                window.AppRouter.navigate(`/group/${data.groupId}`);
+            }
+            closeCallback();
+
         } catch (error) {
             console.error(error);
-            showStatus(statusElement, 'Ошибка сети. Попробуйте еще раз.', true);
+            showStatus(statusElement, error.message || 'Недействительный или просроченный код.', true);
         } finally {
             submitBtn.disabled = false;
         }

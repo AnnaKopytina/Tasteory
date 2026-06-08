@@ -1,4 +1,7 @@
-import { RECIPE_FILTERS } from '../../core/recipe-filters.js';
+import {RECIPE_FILTERS} from '../../core/recipe-filters.js';
+import {NoteService} from "../../services/note-service.js";
+import {RecipeService} from "../../services/recipe-service.js";
+import {AuthService} from "../../services/auth-service.js";
 
 function getPlural(n, one, few, many) {
     let res = n % 10;
@@ -14,36 +17,21 @@ function getPlural(n, one, few, many) {
     return many;
 }
 
-window.saveNote = async function(stepId, text, isPrivate) {
+window.saveNote = async function (stepId, text, isPrivate) {
     const gid = window.currentGroupId;
     const trimmed = text.trim();
     try {
         if (!trimmed) {
-            await fetch(`/api/notes/step/${stepId}?isPrivate=${isPrivate}${gid ? `&groupId=${gid}` : ''}`, {
-                method: 'DELETE',
-                credentials: 'include'
-            });
+            await NoteService.delete(stepId, isPrivate, gid);
         } else {
-            await fetch('/api/notes', {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    stepId,
-                    text: trimmed,
-                    isPrivate,
-                    groupId: isPrivate ? null : gid
-                }),
-                credentials: 'include'
-            });
+            await NoteService.save(stepId, trimmed, isPrivate, gid);
         }
     } catch (e) {
-        console.error(e);
+        console.error('Ошибка сохранения заметки:', e);
     }
 };
 
-window.autoResizeNote = function(textarea) {
+window.autoResizeNote = function (textarea) {
     if (!textarea) {
         return;
     }
@@ -51,7 +39,7 @@ window.autoResizeNote = function(textarea) {
     textarea.style.height = (textarea.scrollHeight) + 'px';
 };
 
-window.changeServings = function(delta) {
+window.changeServings = function (delta) {
     const data = window.currentRecipeData;
     if (!data) {
         return;
@@ -63,7 +51,7 @@ window.changeServings = function(delta) {
     }
 };
 
-window.addNote = async function(index, isPrivate) {
+window.addNote = async function (index, isPrivate) {
     const isAuth = await window.AppRouter.isAuthorized();
     if (!isAuth) {
         alert("Чтобы добавлять свои секретные заметки к шагам, нужно войти в аккаунт!");
@@ -82,17 +70,19 @@ window.addNote = async function(index, isPrivate) {
     txt.focus();
 };
 
-window.deleteNote = async function(index, isPrivate) {
+window.deleteNote = async function (index, isPrivate) {
     const step = window.currentRecipeData.steps[index];
     const gid = window.currentGroupId;
-    await fetch(`/api/notes/step/${step.id}?isPrivate=${isPrivate}${gid ? `&groupId=${gid}` : ''}`, {
-        method: 'DELETE',
-        credentials: 'include'
-    });
-    initRecipePage(new URLSearchParams(window.location.search));
+
+    try {
+        await NoteService.delete(step.id, isPrivate, gid);
+        initRecipePage(new URLSearchParams(window.location.search));
+    } catch (e) {
+        console.error('Ошибка удаления заметки:', e);
+    }
 };
 
-window.toggleFavorite = async function() {
+window.toggleFavorite = async function () {
     const isAuth = await window.AppRouter.isAuthorized();
     if (!isAuth) {
         alert("Чтобы сохранять рецепты, нужно войти в аккаунт.");
@@ -101,14 +91,13 @@ window.toggleFavorite = async function() {
 
     const data = window.currentRecipeData;
     const isAdding = !data.isFavorite;
-    const res = await fetch(`/api/favorites/${data.id}`, {
-        method: isAdding ? 'POST' : 'DELETE',
-        credentials: 'include'
-    });
-    if (res.ok) {
+    try {
+        await RecipeService.toggleFavorite(data.id, isAdding);
         data.isFavorite = isAdding;
         data.favoritesCount += isAdding ? 1 : -1;
         renderFullPage(document.getElementById('content-root'), data);
+    } catch (e) {
+        console.error('Ошибка добавления в избранное', e);
     }
 };
 
@@ -146,24 +135,16 @@ export async function initRecipePage(params) {
 }
 
 async function fetchUserInfo() {
-    const userRes = await fetch('/api/users/me', {
-        credentials: 'include'
-    });
-    if (userRes.ok) {
-        const userData = await userRes.json();
+    try {
+        const userData = await AuthService.getCurrentUser();
         window.currentUserId = String(userData.id).toLowerCase();
+    } catch (e) {
+        window.currentUserId = null;
     }
 }
 
 async function fetchRecipeData(recipeId) {
-    const url = `/api/recipes/${recipeId}${window.currentGroupId ? `?groupId=${window.currentGroupId}` : ''}`;
-    const res = await fetch(url, {
-        credentials: 'include'
-    });
-    if (!res.ok) {
-        throw new Error('Рецепт не найден');
-    }
-    const recipe = await res.json();
+    const recipe = await RecipeService.getById(recipeId, window.currentGroupId);
     recipe.currentServings = recipe.basePortions;
     return recipe;
 }
@@ -175,12 +156,9 @@ async function fetchNotesForSteps(recipe) {
 }
 
 async function fetchSingleStepNotes(step) {
-    const nUrl = `/api/notes/step/${step.id}${window.currentGroupId ? `?groupId=${window.currentGroupId}` : ''}`;
-    const nRes = await fetch(nUrl, {
-        credentials: 'include'
-    });
-    if (nRes.ok) {
-        const nData = await nRes.json();
+    try {
+        const nData = await NoteService.getForStep(step.id, window.currentGroupId);
+
         step.myPrivateNote = nData.myPrivateNote?.text || null;
         const gNotes = nData.groupNotes || [];
         step.myGroupNote = gNotes.find((n) => {
@@ -189,6 +167,7 @@ async function fetchSingleStepNotes(step) {
         step.othersGroupNotes = gNotes.filter((n) => {
             return String(n.authorId).toLowerCase() !== window.currentUserId;
         });
+    } catch (e) {
     }
 }
 

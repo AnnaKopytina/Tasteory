@@ -1,9 +1,10 @@
-import {RECIPE_FILTERS} from '../../core/recipe-filters.js';
-import {el} from "../../core/dom.js";
-
+import { RECIPE_FILTERS } from '../../core/recipe-filters.js';
+import { el } from "../../core/dom.js";
+import { RecipeService } from "../../services/recipe-service.js";
+import { MediaService } from "../../services/media-service.js";
+import { GroupService } from "../../services/group-service.js";
 
 let selectedTags = new Set();
-
 
 function getDeleteIconNode() {
     const iconStr = window.AppIcons?.render?.('delete', 'icon-btn__icon') || '🗑';
@@ -13,16 +14,12 @@ function getDeleteIconNode() {
 
 async function uploadMedia(file) {
     if (!file) return null;
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('/api/media/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
-    });
-    if (!res.ok) throw new Error('Ошибка загрузки фото');
-    const data = await res.json();
-    return data.url || data.path;
+    try {
+        const data = await MediaService.upload(file);
+        return data.url || data.path;
+    } catch (e) {
+        throw new Error('Ошибка загрузки фото');
+    }
 }
 
 function updateImageStatusUI(container, hasImage) {
@@ -201,11 +198,10 @@ export async function initCreatePage(params) {
 
 async function loadRecipeForEdit(root, editId) {
     try {
-        const res = await fetch(`/api/recipes/${editId}`, {credentials: 'include'});
-        const data = await res.json();
+        const data = await RecipeService.getById(editId);
         fillFormWithData(root, data);
     } catch (e) {
-        console.error(e);
+        console.error('Ошибка загрузки рецепта', e);
     }
 }
 
@@ -524,11 +520,14 @@ async function handleFormClick(e, root, form, editId) {
     if (action === 'remove-ingredient') {
         btn.closest('[data-role="ingredient-row"]').remove();
     }
+
     if (action === 'delete-recipe') {
         if (confirm("Удалить рецепт навсегда?")) {
-            const res = await fetch(`/api/recipes/${editId}`, {method: 'DELETE', credentials: 'include'});
-            if (res.ok) {
+            try {
+                await RecipeService.delete(editId);
                 window.AppRouter.navigate('/main');
+            } catch (err) {
+                console.error("Ошибка удаления:", err);
             }
         }
     }
@@ -571,31 +570,22 @@ async function handleFormSubmit(e, form, isGroupContext, groupId, editId) {
             steps: await collectSteps(form)
         };
 
-        const res = await fetch(editId ? `/api/recipes/${editId}` : '/api/recipes', {
-            method: editId ? 'PUT' : 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload),
-            credentials: 'include'
-        });
-
-        if (res.ok) {
-            const created = await res.json().catch(() => ({}));
-            if (!editId && isGroupContext && created.id) {
-                await fetch(`/api/groups/${groupId}/recipes`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(created.id),
-                    credentials: 'include'
-                });
-            }
-            statusEl.textContent = '✅ Готово';
-            setTimeout(() => window.AppRouter.navigate(isGroupContext ? `/group/${groupId}` : '/main'), 1000);
+        let created;
+        if (editId) {
+            created = await RecipeService.update(editId, payload);
         } else {
-            statusEl.textContent = '❌ Ошибка сервера';
-            submitBtn.disabled = false;
+            created = await RecipeService.create(payload);
         }
+
+        if (!editId && isGroupContext && created?.id) {
+            await GroupService.addRecipe(groupId, created.id);
+        }
+
+        statusEl.textContent = '✅ Готово';
+        setTimeout(() => window.AppRouter.navigate(isGroupContext ? `/group/${groupId}` : '/main'), 1000);
+
     } catch (err) {
-        statusEl.textContent = '❌ Ошибка сети';
+        statusEl.textContent = '❌ Ошибка сети или сервера';
         submitBtn.disabled = false;
     }
 }

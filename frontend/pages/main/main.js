@@ -1,7 +1,8 @@
 import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
 import { SearchFilters } from '../../components/search-filters/search-filters.js';
 import { RECIPE_FILTERS, createRecipeFiltersState } from '../../core/recipe-filters.js';
-import {el} from "../../core/dom.js";
+import { el } from "../../core/dom.js";
+import { RecipeService } from '../../services/recipe-service.js';
 
 const PAGE_SIZE = 4;
 const mainState = {
@@ -37,14 +38,14 @@ export async function initMainPage() {
             feedContainer.replaceChildren(el('div', {className: 'loader', textContent: 'Загрузка...'}));
         }
 
-        const url = syncUrlAndGetApiRoute();
+        const apiParams = syncUrlAndGetApiParams();
         updatePageTitle();
 
         try {
-            const response = await fetch(url, { method: 'GET', credentials: 'include' });
-            const data = await response.json();
+            const data = await RecipeService.getAll(apiParams);
             handleMainResponse(data, feedContainer, append, loadData);
         } catch (error) {
+            console.error('Ошибка при загрузке рецептов:', error);
             feedContainer.replaceChildren(el('p', {style: {color: 'red'}, textContent: 'Ошибка загрузки рецептов.'}));
         }
     };
@@ -69,27 +70,49 @@ function updatePageTitle() {
     }
 }
 
-function syncUrlAndGetApiRoute() {
-    const params = new URLSearchParams();
+function syncUrlAndGetApiParams() {
+    const browserParams = new URLSearchParams();
 
     if (mainState.recipeFilters.searchValue) {
-        params.set('searchTerm', mainState.recipeFilters.searchValue);
+        browserParams.set('searchTerm', mainState.recipeFilters.searchValue);
     }
 
     mainState.recipeFilters.activeFilters.forEach(tag => {
-        params.append('tags', tag);
+        browserParams.append('tags', tag);
     });
 
-    const apiParams = new URLSearchParams(params);
-    apiParams.set('page', mainState.currentPage);
-    apiParams.set('pageSize', PAGE_SIZE);
+    const apiParams = {
+        page: mainState.currentPage,
+        pageSize: PAGE_SIZE
+    };
 
-    const queryString = params.toString();
+    if (mainState.recipeFilters.searchValue) {
+        apiParams.searchTerm = mainState.recipeFilters.searchValue;
+    }
+
+    const tagsArray = Array.from(mainState.recipeFilters.activeFilters);
+    if (tagsArray.length > 0) {
+        const apiParamsObj = new URLSearchParams();
+        apiParamsObj.set('page', mainState.currentPage);
+        apiParamsObj.set('pageSize', PAGE_SIZE);
+
+        if (mainState.recipeFilters.searchValue) {
+            apiParamsObj.set('searchTerm', mainState.recipeFilters.searchValue);
+        }
+        tagsArray.forEach(tag => apiParamsObj.append('tags', tag));
+
+        const queryString = browserParams.toString();
+        const newBrowserUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+        window.history.pushState(null, '', newBrowserUrl);
+
+        return apiParamsObj;
+    }
+
+    const queryString = browserParams.toString();
     const newBrowserUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
-
     window.history.pushState(null, '', newBrowserUrl);
 
-    return `/api/recipes?${apiParams.toString()}`;
+    return apiParams;
 }
 
 function handleMainResponse(data, feedContainer, append, loadCallback) {

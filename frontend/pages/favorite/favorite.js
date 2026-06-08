@@ -1,4 +1,5 @@
 import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
+import { RecipeService } from '../../services/recipe-service.js';
 
 const favState = {
     currentPage: 1,
@@ -56,22 +57,14 @@ async function loadFavData(append = false) {
     }
 
     try {
-        const response = await fetch(`/api/users/me/favorites?page=${favState.currentPage}&pageSize=50`, {
-            method: 'GET',
-            credentials: 'include'
-        });
+        const data = await RecipeService.getFavorites(favState.currentPage, 50);
 
-        if (!response.ok) {
-            throw new Error('Ошибка сервера');
-        }
-
-        const data = await response.json();
         favState.totalPages = data.totalPages || 1;
         const items = data.items || [];
 
         processFavItems(items, feedContainer, append);
     } catch (e) {
-        console.error(e);
+        console.error('Ошибка загрузки избранного:', e);
         const errorDiv = document.createElement('div');
         errorDiv.className = 'page-card';
         errorDiv.style.cssText = 'color:red; text-align:center;';
@@ -133,7 +126,7 @@ function renderPaginationButton(container) {
 
         const btn = document.createElement('button');
         applyPaginationButtonStyle(btn);
-        
+
         btn.textContent = 'Показать ещё';
         setupPaginationButtonEvents(btn);
 

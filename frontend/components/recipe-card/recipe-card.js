@@ -1,3 +1,5 @@
+import { RecipeService } from '../../services/recipe-service.js';
+
 function renderIcon(name, className = '') {
     const icon = window.AppIcons?.render?.(name, className) || window.AppIcons?.renderIcon?.(name, className);
     if (icon) {
@@ -135,24 +137,20 @@ export class RecipeCard {
         }
 
         const isAdding = !this.recipe.isFavorite;
-        const method = isAdding ? 'POST' : 'DELETE';
 
         try {
-            const res = await fetch(`/api/favorites/${this.recipe.id}`, {
-                method: method,
-                credentials: 'include'
-            });
+            await RecipeService.toggleFavorite(this.recipe.id, isAdding);
 
-            if (res.ok) {
-                this.updateFavoriteState(isAdding);
-                this.updateFavoriteUI(favoriteBtn, countSpan, isAdding);
-                this.onFavoriteClick(this.recipe);
-            } else if (res.status === 401) {
+            this.updateFavoriteState(isAdding);
+            this.updateFavoriteUI(favoriteBtn, countSpan, isAdding);
+            this.onFavoriteClick(this.recipe);
+        } catch (err) {
+            if (err.message === 'UNAUTHORIZED') {
                 alert("Сессия истекла. Пожалуйста, войдите снова.");
                 window.AppRouter.navigate('/auth');
+            } else {
+                console.error('Ошибка при смене статуса избранного:', err);
             }
-        } catch (err) {
-            console.error('Ошибка при смене статуса избранного:', err);
         }
     }
 

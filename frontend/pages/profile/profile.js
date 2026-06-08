@@ -1,6 +1,10 @@
 import {RecipeCard} from '../../components/recipe-card/recipe-card.js';
 import {el} from "../../core/dom.js";
 import {getIconNode} from "../group/group.js";
+import {AuthService} from "../../services/auth-service.js";
+import {MediaService} from "../../services/media-service.js";
+import {RecipeService} from "../../services/recipe-service.js";
+import {GroupService} from "../../services/group-service.js";
 
 const profileState = {
     user: null,
@@ -20,18 +24,13 @@ const tabs = [
 const getInitials = window.AppUtils?.getInitials || (n => n ? n[0].toUpperCase() : '?');
 
 async function uploadAvatar(file) {
-    const formData = new FormData();
-    formData.append('file', file);
-    const res = await fetch('/api/media/upload', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
-    });
-    if (!res.ok) {
-        throw new Error('Ошибка загрузки');
+    if (!file) return null;
+    try {
+        const data = await MediaService.upload(file);
+        return data.url || data.path;
+    } catch (e) {
+        throw new Error('Ошибка загрузки фото');
     }
-    const data = await res.json();
-    return data.url || data.path;
 }
 
 export async function initProfilePage() {
@@ -55,15 +54,10 @@ export async function initProfilePage() {
 
 async function fetchProfileData() {
     try {
-        const res = await fetch('/api/users/me', {credentials: 'include'});
-        if (res.ok) {
-            profileState.user = await res.json();
-            window.currentUserId = profileState.user.id;
-        } else {
-            window.AppRouter.navigate('/auth');
-        }
+        profileState.user = await AuthService.getCurrentUser();
+        window.currentUserId = profileState.user.id;
     } catch (e) {
-        console.error(e);
+        window.AppRouter.navigate('/auth');
     }
 }
 
@@ -161,9 +155,8 @@ async function renderRecipesTab(container, root, append = false) {
     }
 
     try {
-        const res = await fetch(`/api/recipes/user/${profileState.user.id}?page=${profileState.recipePage}&pageSize=50`, {credentials: 'include'});
-        const data = await res.json();
-        profileState.recipeTotalPages = data.totalPages;
+        const data = await RecipeService.getUserRecipes(profileState.user.id, profileState.recipePage, 50);
+        profileState.recipeTotalPages = data.totalPages || 1;
 
         if (!append && !data.items?.length) {
             grid.replaceChildren(el('div', {className: 'profile-empty', textContent: 'Тут пока пусто.'}));
@@ -195,8 +188,7 @@ async function renderGroupsTab(container) {
     container.replaceChildren(el('div', {className: 'loader', textContent: 'Загрузка...'}));
 
     try {
-        const res = await fetch('/api/users/me/groups?page=1&pageSize=50', {credentials: 'include'});
-        const data = await res.json();
+        const data = await GroupService.getMyGroups(1, 50);
 
         const actions = el('div', {className: 'profile-groups-actions'},
             el('button', {
@@ -208,7 +200,7 @@ async function renderGroupsTab(container) {
         );
 
         const grid = el('div', {className: 'profile-groups-grid'});
-        data.items.forEach(group => {
+        (data.items || []).forEach(group => {
             grid.appendChild(el('a', {className: 'profile-group-card page-card', href: `/group/${group.id}`},
                 el('div', {className: 'profile-group-card__title', textContent: group.name}),
                 el('div', {className: 'profile-group-card__meta', textContent: `${group.membersCount} участников`})
@@ -230,9 +222,8 @@ async function renderFavoritesTab(container, root, append = false) {
     }
 
     try {
-        const res = await fetch(`/api/users/me/favorites?page=${profileState.favPage}&pageSize=50`, {credentials: 'include'});
-        const data = await res.json();
-        profileState.favTotalPages = data.totalPages;
+        const data = await RecipeService.getFavorites(profileState.favPage, 50);
+        profileState.favTotalPages = data.totalPages || 1;
 
         if (!append && !data.items?.length) {
             container.replaceChildren(el('div', {
@@ -358,9 +349,14 @@ async function handleTabSwitch(tabBtn, root) {
 }
 
 async function executeLogout() {
-    await fetch('/api/auth/logout', {method: 'POST', credentials: 'include'});
-    window.AppRouter.setAuthState(false);
-    window.AppRouter.navigate('/auth');
+    try {
+        await AuthService.logout();
+    } catch (e) {
+        console.error("Ошибка при логауте", e);
+    } finally {
+        window.AppRouter.setAuthState(false);
+        window.AppRouter.navigate('/auth');
+    }
 }
 
 function openEditModal() {
@@ -459,15 +455,12 @@ function setupEditModalListeners(backdrop) {
 
     backdrop.querySelector('#save-profile').onclick = async () => {
         const newName = backdrop.querySelector('#edit-name').value.trim();
-        const res = await fetch('/api/users/me', {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({displayName: newName, avatarUrl: currentAvatarUrl}),
-            credentials: 'include'
-        });
-        if (res.ok) {
+        try {
+            await AuthService.updateProfile({displayName: newName, avatarUrl: currentAvatarUrl});
             closeModal();
             initProfilePage();
+        } catch (e) {
+            alert('Ошибка при сохранении профиля');
         }
     };
 

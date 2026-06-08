@@ -16,6 +16,10 @@ export class ApiService {
             },
         };
 
+        if (combinedOptions.body instanceof FormData) {
+            delete combinedOptions.headers["Content-Type"];
+        }
+
         if (combinedOptions.body && typeof combinedOptions.body === "object" && !(combinedOptions.body instanceof FormData)) {
             combinedOptions.body = JSON.stringify(combinedOptions.body);
         }
@@ -40,11 +44,11 @@ export class ApiService {
     }
 
     static get(url, options = {}) {
-        return this.request(url, { ...options, method: "GET" });
+        return this.request(url, {...options, method: "GET"});
     }
 
     static post(url, body = null, options = {}) {
-        const fetchOptions = { ...options, method: "POST" };
+        const fetchOptions = {...options, method: "POST"};
         if (body) {
             fetchOptions.body = body;
         }
@@ -52,7 +56,7 @@ export class ApiService {
     }
 
     static put(url, body = null, options = {}) {
-        const fetchOptions = { ...options, method: "PUT" };
+        const fetchOptions = {...options, method: "PUT"};
         if (body) {
             fetchOptions.body = body;
         }
@@ -60,6 +64,6 @@ export class ApiService {
     }
 
     static delete(url, options = {}) {
-        return this.request(url, { ...options, method: "DELETE" });
+        return this.request(url, {...options, method: "DELETE"});
     }
 }

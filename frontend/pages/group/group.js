@@ -2,6 +2,9 @@ import {RecipeCard} from '../../components/recipe-card/recipe-card.js';
 import {createRecipeFiltersState as createGroupRecipeFiltersState} from '../../core/recipe-filters.js';
 import {renderGroupRecipesControls, renderGroupRecipesList} from './group-recipes-ui.js';
 import {el} from "../../core/dom.js";
+import {GroupService} from "../../services/group-service.js";
+import {AuthService} from "../../services/auth-service.js";
+import {RecipeService} from "../../services/recipe-service.js";
 
 let groupState = {
     group: null,
@@ -16,7 +19,9 @@ let groupState = {
 
 export function getIconNode(iconName, className) {
     const iconStr = window.AppIcons?.render?.(iconName, className) || (iconName === 'dots' ? '⋮' : '');
-    if (!iconStr || iconStr === '⋮') return document.createTextNode(iconStr);
+    if (!iconStr || iconStr === '⋮') {
+        return document.createTextNode(iconStr);
+    }
     return new DOMParser().parseFromString(iconStr, 'text/html').body.firstChild;
 }
 
@@ -49,7 +54,7 @@ async function initSingleGroup(root, groupId) {
         renderLayout(root);
         await renderActiveTabContent(root, members);
     } catch (err) {
-        renderError(root, err.message);
+        renderError(root, err.message || 'Ошибка загрузки группы');
     }
 }
 
@@ -57,15 +62,12 @@ async function initGroupsList(root) {
     root.replaceChildren(el('div', {className: 'loader', textContent: 'Загрузка ваших групп...'}));
 
     try {
-        const res = await fetch('/api/users/me/groups?page=1&pageSize=50', {credentials: 'include'});
-        if (!res.ok) throw new Error('Не удалось загрузить группы');
-
-        const data = await res.json();
+        const data = await GroupService.getMyGroups(1, 50);
         const groups = data.items || [];
 
         renderGroupsListLayout(root, groups);
     } catch (err) {
-        renderError(root, err.message);
+        renderError(root, err.message || 'Не удалось загрузить группы');
     }
 }
 
@@ -147,17 +149,13 @@ function ensureCSS(href) {
 }
 
 async function fetchGroupInitialData(groupId) {
-    const [userRes, res, membersRes] = await Promise.all([
-        fetch('/api/users/me', {credentials: 'include'}),
-        fetch(`/api/groups/${groupId}`, {credentials: 'include'}),
-        fetch(`/api/groups/${groupId}/members`, {credentials: 'include'})
+    const userPromise = AuthService.getCurrentUser().catch(() => null);
+
+    const [userData, groupData, members] = await Promise.all([
+        userPromise,
+        GroupService.getById(groupId),
+        GroupService.getMembers(groupId)
     ]);
-
-    if (!res.ok) throw new Error('Группа не найдена');
-
-    const userData = userRes.ok ? await userRes.json() : null;
-    const groupData = await res.json();
-    const members = await membersRes.json();
 
     return [userData, groupData, members];
 }
@@ -225,11 +223,10 @@ async function renderRecipesTab(container) {
             gridBox.replaceChildren(el('div', {className: 'loader', textContent: 'Ищем рецепты...'}));
         }
 
-        const url = constructRecipesUrl();
+        const queryStr = constructRecipesQuery();
 
         try {
-            const res = await fetch(url, {credentials: 'include'});
-            const data = await res.json();
+            const data = await GroupService.getRecipes(groupState.group.id, queryStr);
             handleRecipesResponse(data, gridBox, append, loadData);
         } catch (e) {
             gridBox.replaceChildren(el('p', {style: {color: 'red'}, textContent: 'Ошибка загрузки'}));
@@ -240,17 +237,17 @@ async function renderRecipesTab(container) {
     await loadData();
 }
 
-function constructRecipesUrl() {
-    let url = `/api/groups/${groupState.group.id}/recipes?page=${groupState.currentPage}&pageSize=50`;
+function constructRecipesQuery() {
+    let q = `page=${groupState.currentPage}&pageSize=50`;
     const activeTags = Array.from(groupState.recipeFilters.activeFilters);
 
     if (activeTags.length > 0) {
-        url += '&' + activeTags.map(t => `tags=${encodeURIComponent(t)}`).join('&');
+        q += '&' + activeTags.map(t => `tags=${encodeURIComponent(t)}`).join('&');
     }
     if (groupState.recipeFilters.searchValue) {
-        url += `&searchTerm=${encodeURIComponent(groupState.recipeFilters.searchValue)}`;
+        q += `&searchTerm=${encodeURIComponent(groupState.recipeFilters.searchValue)}`;
     }
-    return url;
+    return q;
 }
 
 function handleRecipesResponse(data, gridBox, append, loadCallback) {
@@ -372,8 +369,7 @@ function createPickerModal() {
 }
 
 async function loadUserRecipesForPicker(grid, selectedIds, confirmBtn) {
-    const res = await fetch(`/api/recipes/user/${groupState.currentUserId}?page=1&pageSize=50`, {credentials: 'include'});
-    const data = await res.json();
+    const data = await RecipeService.getUserRecipes(groupState.currentUserId, 1, 50);
     const items = data.items || [];
 
     if (items.length === 0) {
@@ -423,14 +419,13 @@ function setupPickerInteractions(grid, selectedIds, confirmBtn) {
 
 async function submitSelectedRecipes(selectedIds, confirmBtn, closeCallback) {
     confirmBtn.disabled = true;
-    for (const id of selectedIds) {
-        await fetch(`/api/groups/${groupState.group.id}/recipes`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(id),
-            credentials: 'include'
-        });
+
+    try {
+        await GroupService.addRecipes(groupState.group.id, Array.from(selectedIds));
+    } catch (e) {
+        console.error("Ошибка при добавлении рецептов в группу", e);
     }
+
     closeCallback();
     initGroupPage(groupState.group.id);
 }
@@ -511,16 +506,12 @@ function setupGroupMenuActions(menu) {
     };
     menu.querySelector('#menu-invite').onclick = async () => {
         try {
-            const res = await fetch(`/api/groups/${groupState.group.id}/invite`, {
-                method: 'POST',
-                credentials: 'include'
-            });
-            const data = await res.json();
+            const data = await GroupService.generateInvite(groupState.group.id);
             await navigator.clipboard.writeText(data.inviteCode);
             alert(`Код скопирован: ${data.inviteCode}`);
             menu.remove();
         } catch (e) {
-            alert("Ошибка");
+            alert("Ошибка получения кода приглашения");
         }
     };
 
@@ -598,7 +589,7 @@ function renderLocalPaginationButton(container, currentPage, totalPages, onLoadM
 }
 
 async function renderMembersTab(container, membersList) {
-    const members = membersList || await (await fetch(`/api/groups/${groupState.group.id}/members`, {credentials: 'include'})).json();
+    const members = membersList || await GroupService.getMembers(groupState.group.id);
 
     const ul = el('ul', {
         className: 'group-page__members',
@@ -699,60 +690,51 @@ async function handleTabSwitch(tabBtn, root) {
 
 async function handleMemberKick(kickBtn) {
     if (confirm(`Исключить участника ${kickBtn.dataset.kickName}?`)) {
-        await fetch(`/api/groups/${groupState.group.id}/members/${kickBtn.dataset.kickId}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-        initGroupPage(groupState.group.id);
+        try {
+            await GroupService.kickMember(groupState.group.id, kickBtn.dataset.kickId);
+            initGroupPage(groupState.group.id);
+        } catch (e) {
+            alert('Не удалось исключить участника');
+        }
     }
 }
 
 async function updateGroupName(newName) {
-    const res = await fetch(`/api/groups/${groupState.group.id}`, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({name: newName}),
-        credentials: 'include'
-    });
-    if (res.ok) {
+    try {
+        await GroupService.update(groupState.group.id, {name: newName});
         window.dispatchEvent(new CustomEvent('groups:changed'));
         initGroupPage(groupState.group.id);
+    } catch (e) {
+        alert('Не удалось переименовать группу');
     }
 }
 
 async function addUserByUsername(username) {
-    const res = await fetch(`/api/groups/${groupState.group.id}/members/by-username`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({userName: username}),
-        credentials: 'include'
-    });
-    if (res.ok) {
+    try {
+        await GroupService.addMemberByUsername(groupState.group.id, username);
         initGroupPage(groupState.group.id);
-    } else {
+    } catch (e) {
         alert("Пользователь не найден.");
     }
 }
 
 async function leaveGroup() {
-    const res = await fetch(`/api/groups/${groupState.group.id}/members/me`, {
-        method: 'DELETE',
-        credentials: 'include'
-    });
-    if (res.ok) {
+    try {
+        await GroupService.leave(groupState.group.id);
         window.dispatchEvent(new CustomEvent('groups:changed'));
         window.AppRouter.navigate('/main');
-    } else {
-        const err = await res.json().catch(() => ({}));
-        alert(err.message || "Ошибка");
+    } catch (err) {
+        alert(err.message || "Ошибка при выходе из группы");
     }
 }
 
 async function deleteGroup() {
-    const res = await fetch(`/api/groups/${groupState.group.id}`, {method: 'DELETE', credentials: 'include'});
-    if (res.ok) {
+    try {
+        await GroupService.delete(groupState.group.id);
         window.dispatchEvent(new CustomEvent('groups:changed'));
         window.AppRouter.navigate('/main');
+    } catch (err) {
+        alert("Не удалось удалить группу");
     }
 }
 

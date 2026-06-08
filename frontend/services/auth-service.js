@@ -25,4 +25,8 @@ export class AuthService {
     static async getCurrentUser() {
         return ApiService.get('/api/users/me');
     }
+
+    static async updateProfile(data) {
+        return ApiService.put('/api/users/me', data);
+    }
 }
