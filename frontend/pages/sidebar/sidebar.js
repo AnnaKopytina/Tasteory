@@ -1,3 +1,5 @@
+const renderIcon = window.AppIcons?.render;
+
 function createIcon(iconName, className = '') {
     if (typeof renderIcon !== 'function') return null;
     const html = renderIcon(iconName, className);
