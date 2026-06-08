@@ -1,32 +1,9 @@
 import {RECIPE_FILTERS} from '../../core/recipe-filters.js';
+import {el} from "../../core/dom.js";
 
-const EMPTY_GUID = "00000000-0000-0000-0000-000000000000";
 
 let selectedTags = new Set();
 
-export function el(tag, attrs = {}, ...children) {
-    const element = document.createElement(tag);
-    for (const [key, value] of Object.entries(attrs)) {
-        if (key === 'className') element.className = value;
-        else if (key === 'dataset') {
-            for (const [dKey, dVal] of Object.entries(value)) element.dataset[dKey] = dVal;
-        } else if (key === 'style') Object.assign(element.style, value);
-        else if (key === 'textContent') element.textContent = value;
-        else if (key === 'value') element.value = value;
-        else if (typeof value === 'boolean') {
-            if (value) element.setAttribute(key, '');
-        } else element.setAttribute(key, value);
-    }
-    children.forEach(child => {
-        if (!child) return;
-        if (typeof child === 'string' || typeof child === 'number') {
-            element.appendChild(document.createTextNode(child));
-        } else if (child instanceof Node) {
-            element.appendChild(child);
-        }
-    });
-    return element;
-}
 
 function getDeleteIconNode() {
     const iconStr = window.AppIcons?.render?.('delete', 'icon-btn__icon') || '🗑';
@@ -210,7 +187,7 @@ export async function initCreatePage(params) {
 
     const editId = params?.get('editId');
     const groupId = params?.get('groupId');
-    
+
     selectedTags.clear();
 
     renderLayout(root, !!groupId, editId);
@@ -224,7 +201,7 @@ export async function initCreatePage(params) {
 
 async function loadRecipeForEdit(root, editId) {
     try {
-        const res = await fetch(`/api/recipes/${editId}`, { credentials: 'include' });
+        const res = await fetch(`/api/recipes/${editId}`, {credentials: 'include'});
         const data = await res.json();
         fillFormWithData(root, data);
     } catch (e) {
@@ -549,7 +526,7 @@ async function handleFormClick(e, root, form, editId) {
     }
     if (action === 'delete-recipe') {
         if (confirm("Удалить рецепт навсегда?")) {
-            const res = await fetch(`/api/recipes/${editId}`, { method: 'DELETE', credentials: 'include' });
+            const res = await fetch(`/api/recipes/${editId}`, {method: 'DELETE', credentials: 'include'});
             if (res.ok) {
                 window.AppRouter.navigate('/main');
             }
@@ -596,7 +573,7 @@ async function handleFormSubmit(e, form, isGroupContext, groupId, editId) {
 
         const res = await fetch(editId ? `/api/recipes/${editId}` : '/api/recipes', {
             method: editId ? 'PUT' : 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload),
             credentials: 'include'
         });
@@ -658,7 +635,7 @@ async function collectSteps(form) {
         const file = blocks[i].querySelector('input[type="file"]').files[0];
         const oldUrl = blocks[i].querySelector('.create-file-name').dataset.currentUrl || "";
         const url = file ? await uploadMedia(file) : oldUrl;
-        steps.push({ content, mediaUrl: url, sortOrder: i + 1, mediaType: url ? "image" : "" });
+        steps.push({content, mediaUrl: url, sortOrder: i + 1, mediaType: url ? "image" : ""});
     }
     return steps;
 }

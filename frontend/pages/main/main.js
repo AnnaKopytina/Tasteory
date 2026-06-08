@@ -1,7 +1,7 @@
 import { RecipeCard } from '../../components/recipe-card/recipe-card.js';
 import { SearchFilters } from '../../components/search-filters/search-filters.js';
 import { RECIPE_FILTERS, createRecipeFiltersState } from '../../core/recipe-filters.js';
-import { el } from '../create/create.js';
+import {el} from "../../core/dom.js";
 
 const PAGE_SIZE = 4;
 const mainState = {

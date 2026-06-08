@@ -1,5 +1,5 @@
 import {RecipeCard} from '../../components/recipe-card/recipe-card.js';
-import {el} from '../create/create.js';
+import {el} from "../../core/dom.js";
 import {getIconNode} from "../group/group.js";
 
 const profileState = {
