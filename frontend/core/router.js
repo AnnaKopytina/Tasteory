@@ -4,7 +4,7 @@
     let intendedUrl = null;
 
     const routes = {
-        '/auth': { title: 'Вход', css: '/auth/auth.css', module: '../auth/auth.js', initKey: 'initAuthPage' },
+        '/auth': { title: 'Вход', css: '/pages/auth/auth.css', module: '../pages/auth/auth.js', initKey: 'initAuthPage' },
         '/': { title: 'Главная', css: ['/pages/main/main.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'], module: '../pages/main/main.js', initKey: 'initMainPage' },
         '/main': { title: 'Главная', css: ['/pages/main/main.css', '/components/recipe-card/recipe-card.css', '/components/search-filters/search-filters.css'], module: '../pages/main/main.js', initKey: 'initMainPage' },
         '/recipe': { title: 'Рецепт', css: '/pages/recipe/recipe.css', module: '../pages/recipe/recipe.js', initKey: 'initRecipePage' },

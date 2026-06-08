@@ -59,7 +59,7 @@ function renderAuthLayout(root) {
     root.innerHTML = `
         <div class="auth-page">
             <div class="auth-illustration" aria-hidden="true">
-                <img src="../svg/auth/installation.svg" alt="Some food.">    
+                <img src="../../svg/auth/installation.svg" alt="Some food.">    
             </div>
             <div class="auth-form-section">
                 <div class="auth-header">
