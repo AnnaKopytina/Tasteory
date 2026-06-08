@@ -1,3 +1,5 @@
+import {AuthService} from "../../services/auth-service.js";
+
 function setAuthMode(isLoginMode, elements) {
     const {
         authTitle, nameGroup, authNameInput, profileIdGroup,
@@ -211,27 +213,16 @@ function isValidEmail(email) {
 }
 
 async function loginUser(email, password, errorContainer) {
-    const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            email,
-            password
-        }),
-        credentials: 'include'
-    });
+    try {
+        await AuthService.login(email, password);
 
-    if (response.ok) {
         if (window.AppRouter) {
             window.AppRouter.setAuthState(true);
-
             const backTo = window.AppRouter.consumeIntendedUrl();
             window.AppRouter.navigate(backTo || '/main');
         }
-    } else {
-        errorContainer.textContent = 'Неверная почта или пароль.';
+    } catch (error) {
+        errorContainer.textContent = error.message || 'Неверная почта или пароль.';
     }
 }
 
@@ -243,22 +234,10 @@ async function registerUser(email, password, elements) {
         username = username.substring(1);
     }
 
-    const registerResponse = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            email,
-            password,
-            displayName,
-            username
-        })
-    });
-
-    if (registerResponse.ok) {
+    try {
+        await AuthService.register(displayName, username, email, password);
         await loginUser(email, password, elements.errorContainer);
-    } else {
-        elements.errorContainer.textContent = 'Ошибка регистрации. Возможно, пользователь уже существует.';
+    } catch (error) {
+        elements.errorContainer.textContent = error.message || 'Ошибка регистрации. Возможно, пользователь уже существует.';
     }
 }

@@ -1,3 +1,5 @@
+import {AuthService} from "../services/auth-service.js";
+
 (function () {
     const loadedStyles = new Set();
     const loadingStyles = new Map();
@@ -45,14 +47,10 @@
         if (state.isAuthenticated !== null) {
             return state.isAuthenticated;
         }
-        try {
-            const response = await fetch('/api/auth/status', { method: 'GET', credentials: 'include' });
-            state.isAuthenticated = response.ok;
-            return state.isAuthenticated;
-        } catch (error) {
-            state.isAuthenticated = false;
-            return false;
-        }
+
+        state.isAuthenticated = await AuthService.getStatus();
+
+        return state.isAuthenticated;
     }
 
     function setAuthState(isAuth) {
