@@ -1,34 +1,5 @@
 import {AuthService} from "../../services/auth-service.js";
-
-function setAuthMode(isLoginMode, elements) {
-    const {
-        authTitle, nameGroup, authNameInput, profileIdGroup,
-        authProfileIdInput, authSubmitBtn, authToggleText, authToggleLink, errorContainer
-    } = elements;
-
-    errorContainer.textContent = '';
-
-    if (isLoginMode) {
-        authTitle.textContent = 'Вход';
-        nameGroup.style.display = 'none';
-        authNameInput.removeAttribute('required');
-        profileIdGroup.style.display = 'none';
-        authProfileIdInput.removeAttribute('required');
-        authSubmitBtn.textContent = 'Войти';
-        authToggleText.textContent = 'Ещё нет аккаунта?';
-        authToggleLink.textContent = 'Зарегистрироваться';
-        return;
-    }
-
-    authTitle.textContent = 'Создать аккаунт';
-    nameGroup.style.display = 'block';
-    authNameInput.setAttribute('required', 'true');
-    profileIdGroup.style.display = 'block';
-    authProfileIdInput.setAttribute('required', 'true');
-    authSubmitBtn.textContent = 'Зарегистрироваться';
-    authToggleText.textContent = 'Уже есть аккаунт?';
-    authToggleLink.textContent = 'Войти';
-}
+import {el} from "../../core/dom.js";
 
 export function initAuthPage() {
     const root = document.getElementById('content-root');
@@ -36,9 +7,10 @@ export function initAuthPage() {
         return;
     }
 
-    renderAuthLayout(root);
+    root.textContent = '';
 
-    const elements = getAuthElements(root);
+    const elements = renderAuthLayout(root);
+
     if (!elements.authForm) {
         return;
     }
@@ -58,62 +30,95 @@ export function initAuthPage() {
 }
 
 function renderAuthLayout(root) {
-    root.innerHTML = `
-        <div class="auth-page">
-            <div class="auth-illustration" aria-hidden="true">
-                <img src="../../svg/auth/installation.svg" alt="Some food.">    
-            </div>
-            <div class="auth-form-section">
-                <div class="auth-header">
-                    <div class="logo">Tasteory</div>
-                </div>
-                <h1 class="auth-title" id="auth-title">Вход</h1>
-                <div id="auth-error" style="color: #d32f2f; margin-bottom: 15px; font-size: 14px; min-height: 20px;"></div>
-                <form id="auth-form">
-                    <div class="input-group" id="name-group" style="display: none;">
-                        <label for="auth-name">Имя пользователя</label>
-                        <input type="text" id="auth-name" placeholder="Введите имя и фамилию">
-                    </div>
-                    <div class="input-group" id="profile-id-group" style="display: none;">
-                        <label for="auth-profile-id">Уникальный ID профиля</label>
-                        <input type="text" id="auth-profile-id" placeholder="Например, user_123">
-                    </div>
-                    <div class="input-group">
-                        <label for="auth-email">Почта</label>
-                        <input type="email" id="auth-email" placeholder="Введите почту" required>
-                    </div>
-                    <div class="input-group">
-                        <label for="auth-password">Пароль</label>
-                        <div class="password-wrapper">
-                            <input type="password" id="auth-password" placeholder="Введите пароль" required>
-                        </div>
-                    </div>
-                    <button type="submit" class="auth-submit-btn" id="auth-submit-btn">Войти</button>
-                </form>
-                <div class="auth-footer">
-                    <span id="auth-toggle-text">Ещё нет аккаунта?</span>
-                    <a href="#" id="auth-toggle-link">Зарегистрироваться</a>
-                </div>
-            </div>
-        </div>
-    `;
+    const authTitle = el('h1', {class: 'auth-title', id: 'auth-title'}, 'Вход');
+    const errorContainer = el('div', {id: 'auth-error', class: 'auth-error-message'});
+
+    const authNameInput = el('input', {type: 'text', id: 'auth-name', placeholder: 'Введите имя и фамилию'});
+    const nameGroup = el('div', {class: 'input-group hidden', id: 'name-group'},
+        el('label', {for: 'auth-name'}, 'Имя пользователя'),
+        authNameInput
+    );
+
+    const authProfileIdInput = el('input', {type: 'text', id: 'auth-profile-id', placeholder: 'Например, user_123'});
+    const profileIdGroup = el('div', {class: 'input-group hidden', id: 'profile-id-group'},
+        el('label', {for: 'auth-profile-id'}, 'Уникальный ID профиля'),
+        authProfileIdInput
+    );
+
+    const authEmailInput = el('input', {type: 'email', id: 'auth-email', placeholder: 'Введите почту', required: true});
+    const emailGroup = el('div', {class: 'input-group'},
+        el('label', {for: 'auth-email'}, 'Почта'),
+        authEmailInput
+    );
+
+    const authPasswordInput = el('input', {
+        type: 'password',
+        id: 'auth-password',
+        placeholder: 'Введите пароль',
+        required: true
+    });
+    const passwordGroup = el('div', {class: 'input-group'},
+        el('label', {for: 'auth-password'}, 'Пароль'),
+        el('div', {class: 'password-wrapper'}, authPasswordInput)
+    );
+
+    const authSubmitBtn = el('button', {type: 'submit', class: 'auth-submit-btn', id: 'auth-submit-btn'}, 'Войти');
+
+    const authForm = el('form', {id: 'auth-form'},
+        nameGroup, profileIdGroup, emailGroup, passwordGroup, authSubmitBtn
+    );
+
+    const authToggleText = el('span', {id: 'auth-toggle-text'}, 'Ещё нет аккаунта?');
+    const authToggleLink = el('a', {href: '#', id: 'auth-toggle-link'}, 'Зарегистрироваться');
+
+    const authPage = el('div', {class: 'auth-page'},
+        el('div', {class: 'auth-illustration', 'aria-hidden': 'true'},
+            el('img', {src: '../../svg/auth/installation.svg', alt: 'Some food.'})
+        ),
+        el('div', {class: 'auth-form-section'},
+            el('div', {class: 'auth-header'},
+                el('div', {class: 'logo'}, 'Tasteory')
+            ),
+            authTitle,
+            errorContainer,
+            authForm,
+            el('div', {class: 'auth-footer'}, authToggleText, ' ', authToggleLink)
+        )
+    );
+
+    root.append(authPage);
+
+    return {
+        authForm, authTitle, nameGroup, authNameInput,
+        profileIdGroup, authProfileIdInput, authSubmitBtn,
+        authToggleText, authToggleLink, authEmailInput,
+        authPasswordInput, errorContainer
+    };
 }
 
-function getAuthElements(root) {
-    return {
-        authForm: root.querySelector('#auth-form'),
-        authTitle: root.querySelector('#auth-title'),
-        nameGroup: root.querySelector('#name-group'),
-        authNameInput: root.querySelector('#auth-name'),
-        profileIdGroup: root.querySelector('#profile-id-group'),
-        authProfileIdInput: root.querySelector('#auth-profile-id'),
-        authSubmitBtn: root.querySelector('#auth-submit-btn'),
-        authToggleText: root.querySelector('#auth-toggle-text'),
-        authToggleLink: root.querySelector('#auth-toggle-link'),
-        authEmailInput: root.querySelector('#auth-email'),
-        authPasswordInput: root.querySelector('#auth-password'),
-        errorContainer: root.querySelector('#auth-error')
-    };
+function setAuthMode(isLoginMode, elements) {
+    elements.errorContainer.textContent = '';
+
+    if (isLoginMode) {
+        elements.authTitle.textContent = 'Вход';
+        elements.nameGroup.classList.add('hidden');
+        elements.authNameInput.removeAttribute('required');
+        elements.profileIdGroup.classList.add('hidden');
+        elements.authProfileIdInput.removeAttribute('required');
+        elements.authSubmitBtn.textContent = 'Войти';
+        elements.authToggleText.textContent = 'Ещё нет аккаунта?';
+        elements.authToggleLink.textContent = 'Зарегистрироваться';
+        return;
+    }
+
+    elements.authTitle.textContent = 'Создать аккаунт';
+    elements.nameGroup.classList.remove('hidden');
+    elements.authNameInput.setAttribute('required', 'true');
+    elements.profileIdGroup.classList.remove('hidden');
+    elements.authProfileIdInput.setAttribute('required', 'true');
+    elements.authSubmitBtn.textContent = 'Зарегистрироваться';
+    elements.authToggleText.textContent = 'Уже есть аккаунт?';
+    elements.authToggleLink.textContent = 'Войти';
 }
 
 async function handleAuthSubmit(event, isLoginMode, elements) {
