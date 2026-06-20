@@ -1,8 +1,8 @@
-import { RECIPE_FILTERS } from '../../core/recipe-filters.js';
-import { el } from "../../core/dom.js";
-import { RecipeService } from "../../services/recipe-service.js";
-import { MediaService } from "../../services/media-service.js";
-import { GroupService } from "../../services/group-service.js";
+import {RECIPE_FILTERS} from '../../core/recipe-filters.js';
+import {el} from "../../core/dom.js";
+import {RecipeService} from "../../services/recipe-service.js";
+import {MediaService} from "../../services/media-service.js";
+import {GroupService} from "../../services/group-service.js";
 
 let selectedTags = new Set();
 
@@ -45,41 +45,28 @@ function renderActiveTags(container) {
     container.replaceChildren();
     selectedTags.forEach(tagId => {
         const label = RECIPE_FILTERS.find(f => f.id === tagId)?.label || tagId;
-        const chip = el('div', {
-                className: 'tag-chip',
-                style: {
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    background: '#e9eef2',
-                    padding: '5px 12px',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    gap: '8px',
-                    color: '#102e3f'
-                }
-            },
+        const chip = el('div', {class: 'tag-chip'},
             label,
             el('span', {
-                dataset: {action: 'remove-tag', id: tagId},
-                style: {cursor: 'pointer', fontWeight: 'bold', color: '#f28c50'},
-                textContent: '×'
-            })
+                class: 'tag-chip__remove',
+                dataset: {action: 'remove-tag', id: tagId}
+            }, '×')
         );
         container.appendChild(chip);
     });
 }
 
 function createIngredientRowNode(ing = null) {
-    return el('div', {className: 'create-row create-ingredient-row', dataset: {role: 'ingredient-row'}},
+    return el('div', {class: 'create-row create-ingredient-row', dataset: {role: 'ingredient-row'}},
         el('input', {
-            className: 'create-input',
+            class: 'create-input',
             type: 'text',
             placeholder: 'Ингредиент',
             dataset: {field: 'name'},
             value: ing?.name || ''
         }),
         el('input', {
-            className: 'create-input create-input--small',
+            class: 'create-input create-input--small',
             type: 'number',
             step: '0.1',
             placeholder: 'Кол-во',
@@ -87,14 +74,14 @@ function createIngredientRowNode(ing = null) {
             value: ing?.amount || ''
         }),
         el('input', {
-            className: 'create-input create-input--small',
+            class: 'create-input create-input--small',
             type: 'text',
             placeholder: 'Мера',
             dataset: {field: 'unit'},
             value: ing?.measure || ''
         }),
         el('button', {
-            className: 'icon-btn',
+            class: 'icon-btn',
             type: 'button',
             dataset: {action: 'remove-ingredient'}
         }, getDeleteIconNode())
@@ -102,76 +89,72 @@ function createIngredientRowNode(ing = null) {
 }
 
 function createSectionNode(name = "", ings = []) {
-    const ingredientsContainer = el('div', {className: 'create-ingredients', dataset: {role: 'ingredients'}});
+    const ingredientsContainer = el('div', {class: 'create-ingredients', dataset: {role: 'ingredients'}});
+
     if (ings.length > 0) {
         ings.forEach(i => ingredientsContainer.appendChild(createIngredientRowNode(i)));
     } else {
         ingredientsContainer.appendChild(createIngredientRowNode());
     }
 
-    return el('article', {className: 'create-section', dataset: {role: 'section'}},
-        el('div', {className: 'create-section__head'},
+    return el('article', {class: 'create-section', dataset: {role: 'section'}},
+        el('div', {class: 'create-section__head'},
             el('input', {
-                className: 'create-input',
+                class: 'create-input',
                 type: 'text',
                 placeholder: 'Название секции',
                 dataset: {field: 'section-name'},
                 value: name
             }),
             el('button', {
-                className: 'icon-btn',
+                class: 'icon-btn',
                 type: 'button',
                 dataset: {action: 'remove-section'}
             }, getDeleteIconNode())
         ),
         ingredientsContainer,
         el('button', {
-            className: 'create-btn create-btn--small',
+            class: 'create-btn create-btn--small',
             type: 'button',
-            dataset: {action: 'add-ingredient'},
-            textContent: '+ Ингредиент'
-        })
+            dataset: {action: 'add-ingredient'}
+        }, '+ Ингредиент')
     );
 }
 
 function createStepNode(step = null) {
     const hasMedia = !!step?.mediaUrl;
-    return el('article', {className: 'create-step', dataset: {role: 'step'}},
-        el('div', {className: 'create-step__head'},
+    return el('article', {class: 'create-step', dataset: {role: 'step'}},
+        el('div', {class: 'create-step__head'},
             el('textarea', {
-                className: 'create-input create-textarea',
+                class: 'create-input create-textarea',
                 rows: '3',
                 placeholder: 'Описание шага',
                 dataset: {field: 'description'},
                 value: step?.content || ''
             }),
-            el('button', {className: 'icon-btn', type: 'button', dataset: {action: 'remove-step'}}, getDeleteIconNode())
+            el('button', {class: 'icon-btn', type: 'button', dataset: {action: 'remove-step'}}, getDeleteIconNode())
         ),
-        el('div', {className: 'create-step__media'},
-            el('div', {className: 'create-image-actions', dataset: {role: 'image-container'}},
+        el('div', {class: 'create-step__media'},
+            el('div', {class: 'create-image-actions', dataset: {role: 'image-container'}},
                 el('button', {
-                    className: 'create-btn create-btn--small',
+                    class: 'create-btn create-btn--small',
                     type: 'button',
-                    dataset: {action: 'upload-step-photo'},
-                    textContent: hasMedia ? 'Изменить фото' : 'Загрузить фото'
-                }),
+                    dataset: {action: 'upload-step-photo'}
+                }, hasMedia ? 'Изменить фото' : 'Загрузить фото'),
                 el('button', {
-                    className: `create-btn create-btn--small ${hasMedia ? '' : 'is-hidden'}`,
+                    class: `create-btn create-btn--small create-btn--grey ${hasMedia ? '' : 'is-hidden'}`,
                     type: 'button',
-                    dataset: {action: 'clear-step-photo'},
-                    style: {background: '#7c8a98'},
-                    textContent: 'Удалить фото'
-                })
+                    dataset: {action: 'clear-step-photo'}
+                }, 'Удалить фото')
             ),
             el('span', {
-                className: 'create-file-name',
-                dataset: {role: 'step-file-name', currentUrl: step?.mediaUrl || ''},
-                textContent: hasMedia ? 'Фото загружено' : 'Нет фото'
-            }),
+                class: 'create-file-name',
+                dataset: {role: 'step-file-name', currentUrl: step?.mediaUrl || ''}
+            }, hasMedia ? 'Фото загружено' : 'Нет фото'),
             el('input', {
                 type: 'file',
                 accept: 'image/*',
-                className: 'create-hidden-input',
+                class: 'create-hidden-input',
                 dataset: {role: 'step-file-input'}
             })
         )
@@ -209,110 +192,77 @@ function renderLayout(root, isGroupContext, editId) {
     root.replaceChildren();
 
     const titleText = editId ? 'Редактировать рецепт' : (isGroupContext ? 'Рецепт для группы' : 'Создать рецепт');
+
     const popupItems = RECIPE_FILTERS.map(f =>
         el('button', {
             type: 'button',
             dataset: {action: 'add-tag', id: f.id},
-            className: 'group-page__menu-item',
-            style: {padding: '8px', fontSize: '14px', borderRadius: '6px'},
-            textContent: f.label
-        })
+            class: 'group-page__menu-item tags-popup-item'
+        }, f.label)
     );
 
-    const tagsPopup = el('div', {
-        id: 'tags-popup',
-        className: 'is-hidden',
-        style: {
-            position: 'absolute',
-            top: '100%',
-            left: '0',
-            background: 'white',
-            border: '1px solid #d8dde4',
-            borderRadius: '12px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
-            zIndex: '10',
-            padding: '10px',
-            width: '200px',
-            display: 'grid',
-            gap: '4px',
-            marginTop: '5px'
-        }
-    }, ...popupItems);
+    const tagsPopup = el('div', {id: 'tags-popup', class: 'tags-popup is-hidden'}, ...popupItems);
 
-    const tagsSection = el('div', {className: 'create-tags-section', style: {margin: '10px 0 20px 0'}},
-        el('p', {
-            style: {fontSize: '14px', fontWeight: '600', color: '#4a5f70', marginBottom: '8px'},
-            textContent: 'Категории'
-        }),
-        el('div', {
-            id: 'selected-tags-container',
-            style: {display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px'}
-        }),
-        el('div', {style: {position: 'relative', display: 'inline-block'}},
+    const tagsSection = el('div', {class: 'create-tags-section-wrapper'},
+        el('p', {class: 'create-tags-title'}, 'Категории'),
+        el('div', {id: 'selected-tags-container', class: 'create-tags-container'}),
+        el('div', {class: 'create-tags-dropdown-wrapper'},
             el('button', {
                 type: 'button',
-                className: 'create-btn create-btn--small',
-                dataset: {action: 'toggle-tags-popup'},
-                textContent: '+ Категория'
-            }),
+                class: 'create-btn create-btn--small',
+                dataset: {action: 'toggle-tags-popup'}
+            }, '+ Категория'),
             tagsPopup
         )
     );
-    const privacySelect = el('div', {style: {display: isGroupContext ? 'none' : 'block'}},
-        el('select', {className: 'create-input', dataset: {field: 'is-private'}},
-            el('option', {value: 'false', textContent: 'Публичный'}),
-            el('option', {value: 'true', textContent: 'Приватный'})
+
+    const privacySelect = el('div', {class: isGroupContext ? 'is-hidden' : ''},
+        el('select', {class: 'create-input', dataset: {field: 'is-private'}},
+            el('option', {value: 'false'}, 'Публичный'),
+            el('option', {value: 'true'}, 'Приватный')
         )
     );
 
-    const groupBadge = isGroupContext ? el('div', {
-        className: 'create-input',
-        style: {background: '#f5f5f5', display: 'flex', alignItems: 'center', color: '#666', height: '45px'},
-        textContent: '🔒 Групповой'
-    }) : null;
-    const block1 = el('section', {className: 'create-block'},
+    const groupBadge = isGroupContext
+        ? el('div', {class: 'create-input group-badge'}, '🔒 Групповой')
+        : null;
+
+    const block1 = el('section', {class: 'create-block'},
         el('input', {
-            className: 'create-input',
+            class: 'create-input',
             type: 'text',
             placeholder: 'Название рецепта',
             dataset: {field: 'title'}
         }),
         el('input', {
-            className: 'create-input',
+            class: 'create-input',
             type: 'number',
             placeholder: 'Время (мин)',
             dataset: {field: 'cook-time'}
         }),
         tagsSection,
-        el('div', {className: 'create-row create-row--split', style: {alignItems: 'flex-start'}},
-            el('div', {
-                    className: 'create-step__media',
-                    style: {flexGrow: '1', background: 'none', padding: '0', border: 'none'}
-                },
-                el('div', {className: 'create-image-actions', dataset: {role: 'image-container'}},
+        el('div', {class: 'create-row create-row--split create-row--top'},
+            el('div', {class: 'create-step__media media-cover-container'},
+                el('div', {class: 'create-image-actions', dataset: {role: 'image-container'}},
                     el('button', {
-                        className: 'create-btn create-btn--small',
+                        class: 'create-btn create-btn--small',
                         type: 'button',
-                        dataset: {action: 'upload-cover-photo'},
-                        textContent: 'Загрузить фото'
-                    }),
+                        dataset: {action: 'upload-cover-photo'}
+                    }, 'Загрузить фото'),
                     el('button', {
-                        className: 'create-btn create-btn--small is-hidden',
+                        class: 'create-btn create-btn--small create-btn--grey is-hidden',
                         type: 'button',
-                        dataset: {action: 'clear-cover-photo'},
-                        style: {background: '#7c8a98'},
-                        textContent: 'Удалить фото'
-                    })
+                        dataset: {action: 'clear-cover-photo'}
+                    }, 'Удалить фото')
                 ),
                 el('span', {
-                    className: 'create-file-name',
-                    dataset: {role: 'cover-file-name', currentUrl: ''},
-                    textContent: 'Нет фото'
-                }),
+                    class: 'create-file-name',
+                    dataset: {role: 'cover-file-name', currentUrl: ''}
+                }, 'Нет фото'),
                 el('input', {
                     type: 'file',
                     accept: 'image/*',
-                    className: 'create-hidden-input',
+                    class: 'create-hidden-input',
                     dataset: {role: 'cover-input'}
                 })
             ),
@@ -321,68 +271,56 @@ function renderLayout(root, isGroupContext, editId) {
         )
     );
 
-    const block2 = el('section', {className: 'create-block'},
-        el('h2', {className: 'create-block__title', textContent: 'Ингредиенты'}),
-        el('div', {className: 'create-servings'},
-            el('span', {textContent: 'Количество порций:'}),
-            el('div', {className: 'create-counter'},
-                el('button', {type: 'button', dataset: {action: 'dec-servings'}, textContent: '-'}),
+    const block2 = el('section', {class: 'create-block'},
+        el('h2', {class: 'create-block__title'}, 'Ингредиенты'),
+        el('div', {class: 'create-servings'},
+            el('span', {}, 'Количество порций:'),
+            el('div', {class: 'create-counter'},
+                el('button', {type: 'button', dataset: {action: 'dec-servings'}}, '-'),
                 el('input', {type: 'number', value: '1', dataset: {role: 'servings-value'}, readOnly: true}),
-                el('button', {type: 'button', dataset: {action: 'inc-servings'}, textContent: '+'})
+                el('button', {type: 'button', dataset: {action: 'inc-servings'}}, '+')
             )
         ),
-        el('div', {className: 'create-sections', dataset: {role: 'sections'}}),
+        el('div', {class: 'create-sections', dataset: {role: 'sections'}}),
         el('button', {
-            className: 'create-btn create-btn--center',
+            class: 'create-btn create-btn--center',
             type: 'button',
-            dataset: {action: 'add-section'},
-            textContent: '+ Секция'
-        })
+            dataset: {action: 'add-section'}
+        }, '+ Секция')
     );
 
-    const block3 = el('section', {className: 'create-block'},
-        el('h2', {className: 'create-block__title', textContent: 'Шаги'}),
-        el('div', {className: 'create-steps', dataset: {role: 'steps'}}),
+    const block3 = el('section', {class: 'create-block'},
+        el('h2', {class: 'create-block__title'}, 'Шаги'),
+        el('div', {class: 'create-steps', dataset: {role: 'steps'}}),
         el('button', {
-            className: 'create-btn create-btn--center',
+            class: 'create-btn create-btn--center',
             type: 'button',
-            dataset: {action: 'add-step'},
-            textContent: '+ Шаг'
-        })
+            dataset: {action: 'add-step'}
+        }, '+ Шаг')
     );
 
-    const actionsDiv = el('div', {
-            className: 'create-actions',
-            style: {display: 'flex', flexDirection: 'column', gap: '10px'}
-        },
+    const actionsDiv = el('div', {class: 'create-actions'},
         el('button', {
-            className: 'create-btn create-btn--submit',
-            type: 'submit',
-            textContent: editId ? 'Сохранить изменения' : 'Сохранить рецепт'
-        })
+            class: 'create-btn create-btn--submit',
+            type: 'submit'
+        }, editId ? 'Сохранить изменения' : 'Сохранить рецепт')
     );
 
     if (editId) {
         actionsDiv.appendChild(el('button', {
-            className: 'create-btn',
+            class: 'create-btn create-btn--danger',
             type: 'button',
-            dataset: {action: 'delete-recipe'},
-            style: {background: '#f28c50'},
-            textContent: 'Удалить рецепт'
-        }));
+            dataset: {action: 'delete-recipe'}
+        }, 'Удалить рецепт'));
     }
 
-    const form = el('form', {className: 'create-form', noValidate: true},
+    const form = el('form', {class: 'create-form', noValidate: true},
         block1, block2, block3, actionsDiv,
-        el('p', {
-            className: 'create-status',
-            dataset: {role: 'status'},
-            style: {textAlign: 'center', fontWeight: 'bold', marginTop: '15px'}
-        })
+        el('p', {class: 'create-status', dataset: {role: 'status'}})
     );
 
-    const page = el('section', {className: 'create-page'},
-        el('h1', {className: 'create-page__title', textContent: titleText}),
+    const page = el('section', {class: 'create-page'},
+        el('h1', {class: 'create-page__title'}, titleText),
         form
     );
 
