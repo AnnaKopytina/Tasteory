@@ -370,7 +370,6 @@
     margin-bottom: 15px;
 }
 
-/* картинка и текст */
 .step-content.grid-cols {
     display: flex;
     flex-direction: row;
@@ -378,7 +377,6 @@
     align-items: start;
 }
 
-/* картинка */
 .step-content.full-media .step-img {
     width: 100%;
     max-height: 500px;
@@ -398,7 +396,6 @@
     margin: 0;
 }
 
-/* ЗАМЕТКА */
 .note-wrapper {
     position: relative;
     display: block;

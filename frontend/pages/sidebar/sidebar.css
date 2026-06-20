@@ -174,9 +174,14 @@ svg.icon {
         gap: 4px;
     }
 
-    .mobile-nav-item.active { color: #f28c50; }
+    .mobile-nav-item.active {
+        color: #f28c50;
+    }
 
-    .mobile-nav-item .icon { width: 24px; height: 24px; }
+    .mobile-nav-item .icon {
+        width: 24px;
+        height: 24px;
+    }
 
     .create-btn-wrapper {
         background: #f28c50;
@@ -188,5 +193,7 @@ svg.icon {
         margin-top: -30px;
         box-shadow: 0 4px 12px rgba(242,140,80,0.4);
     }
-    .create-btn-wrapper .icon { color: #fff !important; }
+    .create-btn-wrapper .icon {
+        color: #fff !important;
+    }
 }

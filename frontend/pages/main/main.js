@@ -142,51 +142,43 @@ function handleMainResponse(data, feedContainer, append, loadCallback) {
     }
 }
 
-function renderMainPaginationButton(feedContainer, loadCallback) {
-    let wrapper = document.getElementById('load-more-main');
-    if (wrapper) {
-        wrapper.remove();
-    }
+function renderMainPaginationButton(container, loadCallback) {
+    document.getElementById('load-more-main')?.remove();
 
     if (mainState.currentPage < mainState.totalPages) {
-        wrapper = document.createElement('div');
-        wrapper.id = 'load-more-main';
-        wrapper.style.cssText = 'display: flex; justify-content: center; width: 100%; padding: 40px 0; grid-column: 1 / -1;';
+        const loadMoreBtn = el('button', {
+            id: 'load-more-btn-el', // внутренний id для стилей если надо
+            textContent: 'Показать ещё',
+            style: {
+                backgroundColor: '#6a852f',
+                color: 'white',
+                border: 'none',
+                borderRadius: '14px',
+                padding: '14px 40px',
+                fontSize: '18px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                boxShadow: '0 4px 12px rgba(106, 133, 47, 0.2)',
+                fontFamily: 'inherit'
+            },
+            onmouseover: (e) => e.target.style.backgroundColor = '#556b26',
+            onmouseout: (e) => e.target.style.backgroundColor = '#6a852f',
+            onclick: (e) => {
+                e.preventDefault();
+                e.target.disabled = true;
+                e.target.textContent = 'Загрузка...';
+                mainState.currentPage++;
+                loadCallback(true);
+            }
+        });
 
-        const btn = document.createElement('button');
-        btn.style.cssText = `
-            background-color: #6a852f;
-            color: white;
-            border: none;
-            border-radius: 14px;
-            padding: 14px 40px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, background-color 0.2s;
-            box-shadow: 0 4px 12px rgba(106, 133, 47, 0.2);
-            font-family: inherit;
-        `;
+        const wrapper = el('div', {
+            id: 'load-more-main',
+            style: { display: 'flex', justifyContent: 'center', width: '100%', padding: '40px 0', gridColumn: '1 / -1' }
+        }, loadMoreBtn);
 
-        btn.textContent = 'Показать ещё';
-
-        btn.onmouseover = () => {
-            btn.style.backgroundColor = '#556b26';
-        };
-        btn.onmouseout = () => {
-            btn.style.backgroundColor = '#6a852f';
-        };
-
-        btn.onclick = (e) => {
-            e.preventDefault();
-            btn.disabled = true;
-            btn.textContent = 'Загрузка...';
-            mainState.currentPage++;
-            loadCallback(true);
-        };
-
-        wrapper.appendChild(btn);
-        feedContainer.after(wrapper);
+        container.appendChild(wrapper);
     }
 }
 

@@ -2,6 +2,16 @@ import {RECIPE_FILTERS} from '../../core/recipe-filters.js';
 import {NoteService} from "../../services/note-service.js";
 import {RecipeService} from "../../services/recipe-service.js";
 import {AuthService} from "../../services/auth-service.js";
+import { el } from "../../core/dom.js";
+
+
+export function getIcon(iconName, className) {
+    const iconStr = window.AppIcons?.render?.(iconName, className) || (iconName === 'dots' ? '⋮' : '');
+    if (!iconStr || iconStr === '⋮') {
+        return document.createTextNode(iconStr);
+    }
+    return new DOMParser().parseFromString(iconStr, 'text/html').body.firstChild;
+}
 
 function getPlural(n, one, few, many) {
     let res = n % 10;
@@ -17,6 +27,10 @@ function getPlural(n, one, few, many) {
     return many;
 }
 
+window.currentRecipeData = null;
+window.currentGroupId = null;
+window.currentUserId = null;
+
 window.saveNote = async function (stepId, text, isPrivate) {
     const gid = window.currentGroupId;
     const trimmed = text.trim();
@@ -31,15 +45,7 @@ window.saveNote = async function (stepId, text, isPrivate) {
     }
 };
 
-window.autoResizeNote = function (textarea) {
-    if (!textarea) {
-        return;
-    }
-    textarea.style.height = 'auto';
-    textarea.style.height = (textarea.scrollHeight) + 'px';
-};
-
-window.changeServings = function (delta) {
+async function changeServings(delta) {
     const data = window.currentRecipeData;
     if (!data) {
         return;
@@ -49,9 +55,9 @@ window.changeServings = function (delta) {
         data.currentServings = newVal;
         renderFullPage(document.getElementById('content-root'), data);
     }
-};
+}
 
-window.addNote = async function (index, isPrivate) {
+async function addNote(index, isPrivate) {
     const isAuth = await window.AppRouter.isAuthorized();
     if (!isAuth) {
         alert("Чтобы добавлять свои секретные заметки к шагам, нужно войти в аккаунт!");
@@ -64,29 +70,15 @@ window.addNote = async function (index, isPrivate) {
         return;
     }
 
-    container.innerHTML = renderNoteElement('', index, isPrivate);
+    container.replaceChildren(renderNoteElement('', index, isPrivate));
     const txt = container.querySelector('textarea');
-    window.autoResizeNote(txt);
     txt.focus();
-};
+}
 
-window.deleteNote = async function (index, isPrivate) {
-    const step = window.currentRecipeData.steps[index];
-    const gid = window.currentGroupId;
-
-    try {
-        await NoteService.delete(step.id, isPrivate, gid);
-        initRecipePage(new URLSearchParams(window.location.search));
-    } catch (e) {
-        console.error('Ошибка удаления заметки:', e);
-    }
-};
-
-window.toggleFavorite = async function () {
+async function toggleFavorite() {
     const isAuth = await window.AppRouter.isAuthorized();
     if (!isAuth) {
-        alert("Чтобы сохранять рецепты, нужно войти в аккаунт.");
-        return;
+        return alert("Чтобы сохранять рецепты, нужно войти в аккаунт.");
     }
 
     const data = window.currentRecipeData;
@@ -99,19 +91,7 @@ window.toggleFavorite = async function () {
     } catch (e) {
         console.error('Ошибка добавления в избранное', e);
     }
-};
-
-window.currentRecipeData = null;
-window.currentGroupId = null;
-window.currentUserId = null;
-
-const escapeHtml = window.AppUtils?.escapeHtml || ((v) => {
-    return v;
-});
-
-const renderIcon = (name, className = '') => {
-    return window.AppIcons?.render?.(name, className) || '';
-};
+}
 
 export async function initRecipePage(params) {
     const root = document.getElementById('content-root');
@@ -119,182 +99,125 @@ export async function initRecipePage(params) {
         return;
     }
     const recipeId = params.get('id');
+    if (!recipeId) {
+        root.replaceChildren(el('div', { className: 'page-card', textContent: 'Рецепт не найден (ID не указан)' }));
+        return;
+    }
     window.currentGroupId = params.get('groupId');
-    root.innerHTML = '<div class="loader">Загрузка...</div>';
+    root.replaceChildren(el('div', { className: 'loader', textContent: 'Загрузка...' }));
 
     try {
-        await fetchUserInfo();
-        const recipe = await fetchRecipeData(recipeId);
-        await fetchNotesForSteps(recipe);
+        const user = await AuthService.getCurrentUser().catch(() => null);
+        window.currentUserId = user ? String(user.id).toLowerCase() : null;
+
+        const recipe = await RecipeService.getById(recipeId, window.currentGroupId);
+        recipe.currentServings = recipe.basePortions;
+
+        for (let step of recipe.steps) {
+            step.myPrivateNote = null;
+            step.myGroupNote = null;
+            step.othersGroupNotes = [];
+            if (window.currentUserId) {
+                try {
+                    const nData = await NoteService.getForStep(step.id, window.currentGroupId);
+
+                    step.myPrivateNote = nData.myPrivateNote?.text || null;
+                    const gNotes = nData.groupNotes || [];
+                    step.myGroupNote = gNotes.find(n => String(n.authorId).toLowerCase() === window.currentUserId)?.text || null;
+                    step.othersGroupNotes = gNotes.filter(n => String(n.authorId).toLowerCase() !== window.currentUserId);
+                } catch (e) {
+                    console.warn(`Не удалось загрузить заметки для шага ${step.id}:`, e.message);
+                }
+            }
+        }
 
         window.currentRecipeData = recipe;
         renderFullPage(root, recipe);
     } catch (err) {
-        root.innerHTML = `<div class="page-card"><h1>Упс!</h1><p>${err.message}</p></div>`;
-    }
-}
-
-async function fetchUserInfo() {
-    try {
-        const userData = await AuthService.getCurrentUser();
-        window.currentUserId = String(userData.id).toLowerCase();
-    } catch (e) {
-        window.currentUserId = null;
-    }
-}
-
-async function fetchRecipeData(recipeId) {
-    const recipe = await RecipeService.getById(recipeId, window.currentGroupId);
-    recipe.currentServings = recipe.basePortions;
-    return recipe;
-}
-
-async function fetchNotesForSteps(recipe) {
-    for (let step of recipe.steps) {
-        await fetchSingleStepNotes(step);
-    }
-}
-
-async function fetchSingleStepNotes(step) {
-    try {
-        const nData = await NoteService.getForStep(step.id, window.currentGroupId);
-
-        step.myPrivateNote = nData.myPrivateNote?.text || null;
-        const gNotes = nData.groupNotes || [];
-        step.myGroupNote = gNotes.find((n) => {
-            return String(n.authorId).toLowerCase() === window.currentUserId;
-        })?.text || null;
-        step.othersGroupNotes = gNotes.filter((n) => {
-            return String(n.authorId).toLowerCase() !== window.currentUserId;
-        });
-    } catch (e) {
+        root.replaceChildren(el('div', { className: 'page-card' },
+            el('h1', { textContent: 'Упс!' }),
+            el('p', { textContent: err.message })
+        ));
     }
 }
 
 function renderFullPage(root, data) {
-    root.innerHTML = `
-        <div class="recipe-inner">
-            ${renderHeaderCard(data).trim()}
-            ${renderIngredientsCard(data).trim()}
-            ${renderStepsCard(data).trim()}
-        </div>
-    `.trim();
+    root.replaceChildren(
+        el('div', { className: 'recipe-inner' },
+            renderHeaderCard(data),
+            renderIngredientsCard(data),
+            el('div', { className: 'page-card' },
+                el('div', { className: 'steps-block' },
+                    el('h2', { className: 'section-title', textContent: 'Как приготовить?' }),
+                    el('div', { className: 'steps-list' },
+                        data.steps.sort((a, b) => a.sortOrder - b.sortOrder).map((s, i) => renderSingleStep(s, i))
+                    )
+                )
+            )
+        )
+    );
 
-    initializeNoteAutoResize();
-}
-
-function initializeNoteAutoResize() {
-    document.querySelectorAll('.note-paper').forEach((t) => {
-        window.autoResizeNote(t);
+    root.querySelectorAll('.note-paper').forEach(t => {
+        t.style.height = 'auto';
+        t.style.height = t.scrollHeight + 'px';
     });
-}
-
-function renderTagsList(tags) {
-    return (tags || [])
-        .filter(tagId => {
-            return tagId.toLowerCase() !== "общее";
-        })
-        .map(tagId => {
-            const filter = RECIPE_FILTERS.find(f => {
-                return f.id === tagId.toLowerCase();
-            });
-            const label = filter ? filter.label : tagId;
-            return `<span style="background: #e9eef2; color: #102e3f; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 500;">${escapeHtml(label)}</span>`;
-        }).join('');
 }
 
 function renderHeaderCard(data) {
     const isAuthor = String(data.authorId).toLowerCase() === String(window.currentUserId).toLowerCase();
-    const imageHtml = data.mainImage
-        ? `<div class="recipe-image"><img src="${data.mainImage}"></div>`
-        : '';
 
-    const tagsHtml = renderTagsList(data.tags);
-
-    return `
-        <div class="page-card">
-            <div class="recipe-header">
-                <div class="recipe-header-left">
-                    <h1 class="recipe-title">${escapeHtml(data.title)}</h1>
-                    <p class="recipe-meta-author">Автор <span>${escapeHtml(data.authorName)}</span></p>
-                </div>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    ${isAuthor ? `
-                        <button class="favorite-btn" 
-                                style="background: none; padding: 0; width: 24px; height: 32px;" 
-                                onclick="window.AppRouter.navigate('/create?editId=${data.id}')" 
-                                title="Редактировать">
-                            ${window.AppIcons?.render?.('edit', 'recipe-bookmark-icon')}
-                        </button>
-                    ` : ''}
-                    <button class="favorite-btn ${data.isFavorite ? 'active' : ''}" onclick="toggleFavorite()">
-                        <span class="favorite-icon">${window.AppIcons?.render?.('bookmark', 'recipe-bookmark-icon')}</span>
-                    </button>
-                </div>
-            </div>
-            ${imageHtml} 
-            <div class="recipe-badges" style="margin-bottom: ${tagsHtml ? '15px' : '0'};">
-                <div class="recipe-badge">
-                    <span class="recipe-badge__icon">${renderIcon('favoritesSmall', 'recipe-badge__svg')}</span>
-                    <span>${data.favoritesCount || 0} сохранили</span>
-                </div>
-                <span class="recipe-dot-divider">${renderIcon('separator', 'recipe-dot-divider__svg')}</span>
-                <div class="recipe-badge">
-                    <span>${data.currentServings} ${getPlural(data.currentServings, 'порция', 'порции', 'порций')}</span>
-                </div>
-                <span class="recipe-dot-divider">${renderIcon('separator', 'recipe-dot-divider__svg')}</span>
-                <div class="recipe-badge">
-                    <span class="recipe-badge__icon">${renderIcon('timeCircle', 'recipe-badge__svg')}</span>
-                    <span>${data.timeMinutes} Мин</span>
-                </div>
-            </div>
-
-            ${tagsHtml ? `
-                <div class="recipe-tags" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
-                    ${tagsHtml}
-                </div>
-            ` : ''}
-        </div>
-    `;
+    return el('div', { className: 'page-card' },
+        el('div', { className: 'recipe-header' },
+            el('div', { className: 'recipe-header-left' },
+                el('h1', { className: 'recipe-title', textContent: data.title }),
+                el('p', { className: 'recipe-meta-author' },
+                    'Автор ', el('span', { textContent: data.authorName })
+                )
+            ),
+            el('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } },
+                isAuthor && el('button', {
+                    className: 'favorite-btn',
+                    style: { background: 'none', padding: 0, width: '24px', height: '32px' },
+                    onclick: () => window.AppRouter.navigate(`/create?editId=${data.id}`),
+                    title: 'Редактировать'
+                }, getIcon('edit', 'recipe-bookmark-icon')),
+                el('button', {
+                    className: `favorite-btn ${data.isFavorite ? 'active' : ''}`,
+                    onclick: toggleFavorite
+                }, el('span', { className: 'favorite-icon' }, getIcon('bookmark', 'recipe-bookmark-icon')))
+            )
+        ),
+        data.mainImage && el('div', { className: 'recipe-image' },
+            el('img', { src: data.mainImage })
+        ),
+        el('div', { className: 'recipe-badges' },
+            el('div', { className: 'recipe-badge' },
+                el('span', { className: 'recipe-badge__icon' }, getIcon('favoritesSmall', 'recipe-badge__svg')),
+                el('span', { textContent: `${data.favoritesCount || 0} сохранили` })
+            ),
+            el('span', { className: 'recipe-dot-divider' }, getIcon('separator', 'recipe-dot-divider__svg')),
+            el('div', { className: 'recipe-badge' },
+                el('span', { textContent: `${data.currentServings} ${getPlural(data.currentServings, 'порция', 'порции', 'порций')}` })
+            ),
+            el('span', { className: 'recipe-dot-divider' }, getIcon('separator', 'recipe-dot-divider__svg')),
+            el('div', { className: 'recipe-badge' },
+                el('span', { className: 'recipe-badge__icon' }, getIcon('timeCircle', 'recipe-badge__svg')),
+                el('span', { textContent: `${data.timeMinutes} Мин` })
+            )
+        ),
+        data.tags?.length > 0 && el('div', { className: 'recipe-tags', style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' } },
+            data.tags.filter(t => t.toLowerCase() !== "общее").map(tagId => {
+                const filter = RECIPE_FILTERS.find(f => f.id === tagId.toLowerCase());
+                return el('span', {
+                    style: { background: '#e9eef2', color: '#102e3f', padding: '4px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: '500' },
+                    textContent: filter ? filter.label : tagId
+                });
+            })
+        )
+    );
 }
 
 function renderIngredientsCard(data) {
-    return `
-        <div class="page-card">
-            <div class="ingredients-block">
-                <div class="ingredients-header">
-                    <h2>Ингредиенты <span class="ing-count">${data.ingredients.length}</span></h2>
-                    <div class="counter-rigth">
-                        <span>Количество порций:</span>
-                        <div class="servings-counter">
-                            <button onclick="changeServings(-1)">-</button>
-                            <input type="number" value="${data.currentServings}" readonly>
-                            <button onclick="changeServings(1)">+</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="ingredients-list">
-                    ${renderIngredients(data).trim()}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderStepsCard(data) {
-    return `
-        <div class="page-card">
-            <div class="steps-block">
-                <h2 class="section-title">Как приготовить?</h2>
-                <div class="steps-list">
-                    ${renderSteps(data).trim()}
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderIngredients(data) {
     const groups = data.ingredients.reduce((acc, item) => {
         const name = item.section || "Состав";
         if (!acc[name]) {
@@ -303,88 +226,104 @@ function renderIngredients(data) {
         acc[name].push(item);
         return acc;
     }, {});
-    return Object.entries(groups).map(([name, items]) => {
-        return `
-        <div class="ing-group">
-            <div class="ing-group-header"><span>${escapeHtml(name)}</span></div>
-            <ul class="ing-items">
-                ${items.map((item) => {
-            const ratio = data.currentServings / data.basePortions;
-            const amount = (item.amount * ratio).toFixed(1);
-            return `
-                        <li>
-                            <span class="name">${escapeHtml(item.name)}</span>
-                            <span class="dots"></span>
-                            <span class="val">${parseFloat(amount)} ${escapeHtml(item.measure || '')}</span>
-                        </li>`;
-        }).join('')}
-            </ul>
-        </div>`;
-    }).join('');
-}
 
-function renderSteps(data) {
-    return data.steps
-        .sort((a, b) => {
-            return a.sortOrder - b.sortOrder;
-        })
-        .map((step, i) => {
-            return renderSingleStep(step, i);
-        }).join('');
+    return el('div', { className: 'page-card' },
+        el('div', { className: 'ingredients-block' },
+            el('div', { className: 'ingredients-header' },
+                el('h2', {}, 'Ингредиенты ', el('span', { className: 'ing-count', textContent: data.ingredients.length })),
+                el('div', { className: 'counter-rigth' },
+                    el('span', { textContent: 'Количество порций:' }),
+                    el('div', { className: 'servings-counter' },
+                        el('button', { onclick: () => changeServings(-1), textContent: '-' }),
+                        el('input', { type: 'number', value: data.currentServings, readOnly: true }),
+                        el('button', { onclick: () => changeServings(1), textContent: '+' })
+                    )
+                )
+            ),
+            el('div', { className: 'ingredients-list' },
+                Object.entries(groups).map(([name, items]) => el('div', { className: 'ing-group' },
+                    el('div', { className: 'ing-group-header' }, el('span', { textContent: name })),
+                    el('ul', { className: 'ing-items' },
+                        items.map(item => {
+                            const amount = (item.amount * (data.currentServings / data.basePortions)).toFixed(1);
+                            return el('li', {},
+                                el('span', { className: 'name', textContent: item.name }),
+                                el('span', { className: 'dots' }),
+                                el('span', { className: 'val', textContent: `${parseFloat(amount)} ${item.measure || ''}` })
+                            );
+                        })
+                    )
+                ))
+            )
+        )
+    );
 }
 
 function renderSingleStep(step, i) {
-    const privNoteText = step.myPrivateNote || '';
-    const groupNoteText = step.myGroupNote || '';
     const showPrivBtn = !step.myPrivateNote;
     const showGroupBtn = window.currentGroupId && !step.myGroupNote;
 
-    return `
-    <div class="step-card">
-        <div class="step-card__header">
-            <h3>Шаг ${step.sortOrder}</h3>
-            <div class="note-action" style="display: flex; gap: 12px;">
-                ${showPrivBtn ? `
-                    <button class="add-note-btn" onclick="addNote(${i}, true)">
-                        <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
-                        <span>Добавить заметку</span>
-                    </button>` : ''}
-                ${showGroupBtn ? `
-                    <button class="add-note-btn" onclick="addNote(${i}, false)">
-                        <span class="add-note-btn__icon" aria-hidden="true">${renderIcon('plus', 'add-note-btn__icon-svg')}</span>
-                        <span>Добавить групповую заметку</span>
-                    </button>` : ''}
-            </div>
-        </div>
-        <div class="step-content ${step.mediaUrl ? 'grid-cols' : ''}">
-            ${step.mediaUrl ? `<img src="${step.mediaUrl}" class="step-img">` : ''}
-            <p class="step-text">${escapeHtml(step.content)}</p>
-        </div>
-        <div id="area-priv-${i}">${step.myPrivateNote ? renderNoteElement(privNoteText, i, true) : ''}</div>
-        <div id="area-group-${i}">${step.myGroupNote ? renderNoteElement(groupNoteText, i, false) : ''}</div>
-        
-        ${window.currentGroupId && step.othersGroupNotes?.length ? `
-            <div style="margin: 20px 30px; padding: 12px; background: #f8f9fa; border-radius:12px; border:1px solid #eee;">
-                <p style="margin:0 0 8px 0; font-size:13px; font-weight:bold; color:#7c8a98;">Советы участников:</p>
-                ${step.othersGroupNotes.map((n) => `
-                    <p style="font-size:14px; margin:4px 0;"><b>${escapeHtml(n.authorName)}:</b> ${escapeHtml(n.text)}</p>
-                `).join('')}
-            </div>` : ''}
-    </div>`;
+    return el('div', { className: 'step-card' },
+        el('div', { className: 'step-card__header' },
+            el('h3', { textContent: `Шаг ${step.sortOrder}` }),
+            el('div', { className: 'note-action', style: { display: 'flex', gap: '12px' } },
+                showPrivBtn && el('button', { className: 'add-note-btn', onclick: () => addNote(i, true) },
+                    el('span', { className: 'add-note-btn__icon' }, getIcon('plus', 'add-note-btn__icon-svg')),
+                    el('span', { textContent: 'Добавить заметку' })
+                ),
+                showGroupBtn && el('button', { className: 'add-note-btn', onclick: () => addNote(i, false) },
+                    el('span', { className: 'add-note-btn__icon' }, getIcon('plus', 'add-note-btn__icon-svg')),
+                    el('span', { textContent: 'Добавить групповую заметку' })
+                )
+            )
+        ),
+        el('div', { className: `step-content ${step.mediaUrl ? 'grid-cols' : ''}` },
+            step.mediaUrl && el('img', { src: step.mediaUrl, className: 'step-img' }),
+            el('p', { className: 'step-text', textContent: step.content })
+        ),
+        el('div', { id: `area-priv-${i}` }, step.myPrivateNote ? renderNoteElement(step.myPrivateNote, i, true) : null),
+        el('div', { id: `area-group-${i}` }, step.myGroupNote ? renderNoteElement(step.myGroupNote, i, false) : null),
+
+        window.currentGroupId && step.othersGroupNotes?.length > 0 && el('div', {
+                style: { margin: '20px 30px', padding: '12px', background: '#f8f9fa', borderRadius: '12px', border: '1px solid #eee' }
+            },
+            el('p', { style: { margin: '0 0 8px 0', fontSize: '13px', fontWeight: 'bold', color: '#7c8a98' }, textContent: 'Советы участников:' }),
+            step.othersGroupNotes.map(n => el('p', { style: { fontSize: '14px', margin: '4px 0' } },
+                el('b', { textContent: `${n.authorName}: ` }),
+                n.text
+            ))
+        )
+    );
 }
 
 function renderNoteElement(note, index, isPrivate) {
     const color = isPrivate ? '#FFF9C4' : '#E8F5E9';
-    return `
-        <div class="note-wrapper" style="background: ${color}; margin: 20px 30px;">
-            <button class="note-control-btn btn-delete" onclick="deleteNote(${index}, ${isPrivate})" title="Удалить">
-                ${renderIcon('plus', 'icon-close note-delete-icon')}
-            </button>
-            <textarea 
-                class="note-paper" 
-                style="background: ${color};"
-                placeholder="Напишите здесь..."
-                oninput="autoResizeNote(this)"
-                onblur="saveNote('${window.currentRecipeData.steps[index].id}', this.value, ${isPrivate})">${note}</textarea>
-        </div>`;
+    const stepId = window.currentRecipeData.steps[index].id;
+    return el('div', { className: 'note-wrapper', style: { background: color, margin: '20px 30px' } },
+        el('button', {
+            className: 'note-control-btn btn-delete',
+            title: 'Удалить',
+            onclick: async () => {
+                await NoteService.delete(stepId, isPrivate, window.currentGroupId);
+                document.getElementById(isPrivate ? `area-priv-${index}` : `area-group-${index}`).replaceChildren();
+            }
+        }, getIcon('plus', 'icon-close note-delete-icon')),
+        el('textarea', {
+            className: 'note-paper',
+            style: { background: color },
+            placeholder: 'Напишите здесь...',
+            value: note,
+            oninput: (e) => {
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+            },
+            onblur: async (e) => {
+                const val = e.target.value.trim();
+                if (!val) {
+                    await NoteService.delete(stepId, isPrivate, window.currentGroupId);
+                }
+                else await NoteService.save(stepId, val, isPrivate, window.currentGroupId);
+            }
+        })
+    );
 }
