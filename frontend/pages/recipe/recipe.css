@@ -357,7 +357,8 @@
 }
 
 .note-action {
-    display: inline-flex;
+    display: flex;
+    gap: 12px;
 }
 
 .step-card h3 {
@@ -399,7 +400,7 @@
 .note-wrapper {
     position: relative;
     display: block;
-    margin: 30px 30px 20px 30px;
+    margin: 20px 30px;
     filter: drop-shadow(0px 4px 6px rgba(0, 0, 0, 0.2));
 }
 
@@ -413,6 +414,16 @@
     width: 100px;
     height: 20px;
     background: #F9C452;
+}
+
+.note-wrapper--group,
+.note-wrapper--group .note-paper {
+    background-color: #E8F5E9 !important;
+}
+
+.note-wrapper--private,
+.note-wrapper--private .note-paper {
+    background-color: #FFF9C4 !important;
 }
 
 .note-paper {
@@ -684,4 +695,63 @@
         border-radius: 10px;
         display: block;
     }
+}
+
+.recipe-header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.edit-recipe-btn {
+    background: none;
+    padding: 0;
+    width: 24px;
+    height: 32px;
+    cursor: pointer;
+}
+
+.recipe-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.recipe-tag {
+    background: #e9eef2;
+    color: #102e3f;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.recipe-tag-item {
+    background: #e9eef2;
+    color: #102e3f;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.others-notes-block {
+    margin: 20px 30px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #eee;
+}
+
+.others-notes-title {
+    margin: 0 0 8px 0;
+    font-size: 13px;
+    font-weight: bold;
+    color: #7c8a98;
+}
+
+.others-notes-text {
+    font-size: 14px;
+    margin: 4px 0;
 }

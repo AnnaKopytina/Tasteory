@@ -174,7 +174,7 @@ function renderHeaderCard(data) {
                     'Автор ', el('span', { textContent: data.authorName })
                 )
             ),
-            el('div', { style: { display: 'flex', gap: '12px', alignItems: 'center' } },
+            el('div', { className: 'recipe-header-actions' },
                 isAuthor && el('button', {
                     className: 'favorite-btn',
                     style: { background: 'none', padding: 0, width: '24px', height: '32px' },
@@ -205,11 +205,11 @@ function renderHeaderCard(data) {
                 el('span', { textContent: `${data.timeMinutes} Мин` })
             )
         ),
-        data.tags?.length > 0 && el('div', { className: 'recipe-tags', style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' } },
+        data.tags?.length > 0 && el('div', { className: 'recipe-tags' },
             data.tags.filter(t => t.toLowerCase() !== "общее").map(tagId => {
                 const filter = RECIPE_FILTERS.find(f => f.id === tagId.toLowerCase());
                 return el('span', {
-                    style: { background: '#e9eef2', color: '#102e3f', padding: '4px 12px', borderRadius: '20px', fontSize: '14px', fontWeight: '500' },
+                    className: 'recipe-tag-item',
                     textContent: filter ? filter.label : tagId
                 });
             })
@@ -266,7 +266,7 @@ function renderSingleStep(step, i) {
     return el('div', { className: 'step-card' },
         el('div', { className: 'step-card__header' },
             el('h3', { textContent: `Шаг ${step.sortOrder}` }),
-            el('div', { className: 'note-action', style: { display: 'flex', gap: '12px' } },
+            el('div', { className: 'note-action' },
                 showPrivBtn && el('button', { className: 'add-note-btn', onclick: () => addNote(i, true) },
                     el('span', { className: 'add-note-btn__icon' }, getIcon('plus', 'add-note-btn__icon-svg')),
                     el('span', { textContent: 'Добавить заметку' })
@@ -284,11 +284,9 @@ function renderSingleStep(step, i) {
         el('div', { id: `area-priv-${i}` }, step.myPrivateNote ? renderNoteElement(step.myPrivateNote, i, true) : null),
         el('div', { id: `area-group-${i}` }, step.myGroupNote ? renderNoteElement(step.myGroupNote, i, false) : null),
 
-        window.currentGroupId && step.othersGroupNotes?.length > 0 && el('div', {
-                style: { margin: '20px 30px', padding: '12px', background: '#f8f9fa', borderRadius: '12px', border: '1px solid #eee' }
-            },
-            el('p', { style: { margin: '0 0 8px 0', fontSize: '13px', fontWeight: 'bold', color: '#7c8a98' }, textContent: 'Советы участников:' }),
-            step.othersGroupNotes.map(n => el('p', { style: { fontSize: '14px', margin: '4px 0' } },
+        window.currentGroupId && step.othersGroupNotes?.length > 0 && el('div', { className: 'others-notes-block' },
+            el('p', { className: 'others-notes-title', textContent: 'Советы участников:' }),
+            step.othersGroupNotes.map(n => el('p', { className: 'others-notes-text' },
                 el('b', { textContent: `${n.authorName}: ` }),
                 n.text
             ))
@@ -297,9 +295,10 @@ function renderSingleStep(step, i) {
 }
 
 function renderNoteElement(note, index, isPrivate) {
-    const color = isPrivate ? '#FFF9C4' : '#E8F5E9';
+    const colorClass = isPrivate ? 'note-wrapper--private' : 'note-wrapper--group';
+
     const stepId = window.currentRecipeData.steps[index].id;
-    return el('div', { className: 'note-wrapper', style: { background: color, margin: '20px 30px' } },
+    return el('div', { className: `note-wrapper ${colorClass}` },
         el('button', {
             className: 'note-control-btn btn-delete',
             title: 'Удалить',
@@ -310,7 +309,6 @@ function renderNoteElement(note, index, isPrivate) {
         }, getIcon('plus', 'icon-close note-delete-icon')),
         el('textarea', {
             className: 'note-paper',
-            style: { background: color },
             placeholder: 'Напишите здесь...',
             value: note,
             oninput: (e) => {
