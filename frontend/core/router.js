@@ -1,4 +1,5 @@
 import {AuthService} from "../services/auth-service.js";
+import { el } from "./dom.js";
 
 (function () {
     const loadedStyles = new Set();
@@ -106,13 +107,17 @@ import {AuthService} from "../services/auth-service.js";
         if (!root) {
             return;
         }
-        root.innerHTML = `<div class="page-card"><h1>${title}</h1><p>${message}</p><button class="nav-item" data-action="go-home" style="border:1px solid #ccc; margin-top:20px; cursor:pointer">Вернуться на главную</button></div>`;
-        const button = root.querySelector('[data-action="go-home"]');
-        if (button) {
-            button.addEventListener('click', () => {
-                navigate('/main');
-            });
-        }
+        root.replaceChildren(el('div', { className: 'page-card' },
+            el('h1', { textContent: title }),
+            el('p', { textContent: message }),
+            el('button', {
+                className: 'nav-item',
+                dataset: { action: 'go-home' },
+                style: { border: '1px solid #ccc', marginTop: '20px', cursor: 'pointer' },
+                textContent: 'Вернуться на главную',
+                onClick: () => navigate('/main')
+            })
+        ));
     }
 
     async function loadRouteAssets(route) {
@@ -128,7 +133,7 @@ import {AuthService} from "../services/auth-service.js";
     }
 
     async function handleJoinRedirect(code, root) {
-        root.innerHTML = '<div class="loader">Присоединяемся к группе...</div>';
+        root.replaceChildren(el('div', { className: 'loader', textContent: 'Присоединяемся к группе...' }));
         try {
             const res = await fetch('/api/groups/join', {
                 method: 'POST',
@@ -187,12 +192,12 @@ import {AuthService} from "../services/auth-service.js";
         }
 
         updateActiveState(url);
-        root.innerHTML = '<div class="loader">Загрузка...</div>';
+        root.replaceChildren(el('div', { className: 'loader', textContent: 'Загрузка...' }));
 
         try {
             await loadRouteAssets(route);
             const pageModule = await import(route.module);
-            root.innerHTML = '';
+            root.replaceChildren();
             const initFunc = resolveInitFn(route, pageModule);
 
             if (typeof initFunc !== 'function') {

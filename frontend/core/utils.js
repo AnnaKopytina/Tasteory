@@ -1,16 +1,19 @@
-(() => {
-    function escapeHtml(value) {
-        return String(value)
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#39;');
-    }
+import { el } from "./dom.js";
 
-    function clamp(value, min, max) {
-        return Math.max(min, Math.min(max, value));
-    }
+export function escapeHtml(value) {
+    const map = {
+        "&": "&" + "amp;",
+        "<": "&" + "lt;",
+        ">": "&" + "gt;",
+        '"': "&" + "quot;",
+        "'": "&#" + "39;"
+    };
+    return String(value).replace(/[&<>"']/g, (ch) => map[ch]);
+}
+
+export function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
 
     function filenameFromPath(path) {
         if (!path) {
@@ -37,43 +40,38 @@
         return `${firstLetter}${lastLetter}`.toUpperCase();
     }
 
-    function renderRestrictedContent(root) {
-        root.innerHTML = `
-        <div class="restricted-container" style="
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            justify-content: center; 
-            height: 60vh; 
-            text-align: center;
-            font-family: 'Montserrat', sans-serif;
-        ">
-            <h2 style="color: #0a2533; margin-bottom: 20px;">Войдите или зарегистрируйтесь, <br> чтобы пользоваться этой страницей</h2>
-            <button id="restricted-login-btn" style="
-                background-color: #f28c50; 
-                color: white; 
-                border: none; 
-                padding: 12px 30px; 
-                border-radius: 15px; 
-                font-size: 18px; 
-                font-weight: bold; 
-                cursor: pointer;
-                transition: transform 0.2s;
-            ">Войти</button>
-        </div>
-    `;
+export function renderRestrictedContent(root) {
+    root.replaceChildren(el("div", { className: "restricted-container", style: {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "60vh",
+        textAlign: "center",
+        fontFamily: "'Montserrat', sans-serif"
+    }},
+        el("h2", { style: { color: "#0a2533", marginBottom: "20px" }},
+            "Войдите или зарегистрируйтесь, ",
+            el("br"),
+            "чтобы пользоваться этой страницей"
+        ),
+        el("button", {
+            id: "restricted-login-btn",
+            style: {
+                backgroundColor: "#f28c50",
+                color: "white",
+                border: "none",
+                padding: "12px 30px",
+                borderRadius: "15px",
+                fontSize: "18px",
+                fontWeight: "bold",
+                cursor: "pointer",
+                transition: "transform 0.2s"
+            },
+            textContent: "Войти",
+            onClick: () => window.AppRouter.navigate("/auth")
+        })
+    ));
+}
 
-        document.getElementById('restricted-login-btn').onclick = () => {
-            window.AppRouter.navigate('/auth');
-        };
-    }
-
-    window.AppUtils = {
-        escapeHtml,
-        clamp,
-        filenameFromPath,
-        getInitials,
-        renderRestrictedContent
-    };
-})();
-
+window.AppUtils = { escapeHtml, clamp, filenameFromPath, getInitials, renderRestrictedContent };
