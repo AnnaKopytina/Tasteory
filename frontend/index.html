@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasteory</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/pages/sidebar/sidebar.css">
+    <link rel="stylesheet" href="/pages/group/group-modal.css">
+</head>
+<body>
+<header class="mobile-top-bar">
+    <div class="logo">Tasteory</div>
+</header>
+
+<!-- Меню -->
+<aside class="sidebar">
+    <div class="logo">Tasteory</div>
+
+    <nav class="side-nav">
+        <a href="/main" class="nav-item active" data-page="Главная">
+            <span class="icon" data-icon="book" aria-hidden="true"></span>
+            <span>Главная</span>
+        </a>
+
+        <a href="/create" class="nav-item" data-page="Создать рецепт">
+            <span class="icon" data-icon="plus" aria-hidden="true"></span>
+            <span>Создать рецепт</span>
+        </a>
+
+        <div class="nav-group">
+            <div class="nav-item group-header">
+                <span id="toggle-groups" role="button" tabindex="0" aria-expanded="false" aria-controls="groups-list">
+                    <span class="icon" data-icon="open" aria-hidden="true"></span>
+                    <span>Мои группы</span>
+                </span>
+                <button type="button" class="add-btn" id="add-group-btn" title="Добавить группу" aria-label="Добавить группу">
+                    <span class="icon" data-icon="plus" aria-hidden="true"></span>
+                </button>
+            </div>
+            <div class="sub-menu" id="groups-list">
+            </div>
+        </div>
+
+        <a href="/favorite" class="nav-item" data-page="Избранное">
+            <span class="icon" data-icon="favorite" aria-hidden="true"></span>
+            <span>Избранное</span>
+        </a>
+
+        <a href="/profile" class="nav-item" data-page="Профиль">
+            <span class="icon" data-icon="profile" aria-hidden="true"></span>
+            <span>Профиль</span>
+        </a>
+    </nav>
+</aside>
+
+<!-- МОБИЛЬНОЕ НИЖНЕЕ МЕНЮ-->
+<nav class="mobile-bottom-nav">
+    <a href="/main" class="mobile-nav-item active">
+        <span class="icon" data-icon="book"></span>
+        <span class="label">Главная</span>
+    </a>
+    <a href="/groups" class="mobile-nav-item">
+        <span class="icon" data-icon="group"></span>
+        <span class="label">Сообщества</span>
+    </a>
+    <a href="/create" class="mobile-nav-item">
+        <div class="plus-icon-circle">
+            <span class="icon" data-icon="plus"></span>
+        </div>
+        <span class="label">Создать</span>
+    </a>
+    <a href="/favorite" class="mobile-nav-item">
+        <span class="icon" data-icon="favorite"></span>
+        <span class="label">Избранное</span>
+    </a>
+    <a href="/profile" class="mobile-nav-item" id="mobile-profile-link">
+        <span class="icon" data-icon="profile"></span>
+        <span class="label">Профиль</span>
+    </a>
+</nav>
+
+<!-- Динамический контент -->
+<main class="content-area" id="content-root"></main>
+
+    <script type="module" src="/core/utils.js"></script>
+<script src="/components/icons/icons.js"></script>
+<script type="module" src="/components/modals/group-create-modal.js"></script>
+<script type="module" src="/core/router.js"></script>
+<script type="module" src="/pages/sidebar/sidebar.js"></script>
+</body>
+</html>

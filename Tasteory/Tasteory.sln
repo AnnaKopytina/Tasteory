@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tasteory.Api", "Tasteory.Api\Tasteory.Api.csproj", "{8E7C9015-2B84-407B-A41C-F37A97F26150}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tasteory.Domain", "Tasteory.Domain\Tasteory.Domain.csproj", "{2C593478-D3F2-4C4E-AC94-D298E94A819E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tasteory.Application", "Tasteory.Application\Tasteory.Application.csproj", "{4D7420F9-BEEB-4DD2-95B4-40E982648B3D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tasteory.Infrastructure", "Tasteory.Infrastructure\Tasteory.Infrastructure.csproj", "{92CCBC38-28B5-4D9A-AE85-266A23BDE6F6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8E7C9015-2B84-407B-A41C-F37A97F26150}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E7C9015-2B84-407B-A41C-F37A97F26150}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E7C9015-2B84-407B-A41C-F37A97F26150}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E7C9015-2B84-407B-A41C-F37A97F26150}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2C593478-D3F2-4C4E-AC94-D298E94A819E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2C593478-D3F2-4C4E-AC94-D298E94A819E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2C593478-D3F2-4C4E-AC94-D298E94A819E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2C593478-D3F2-4C4E-AC94-D298E94A819E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D7420F9-BEEB-4DD2-95B4-40E982648B3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D7420F9-BEEB-4DD2-95B4-40E982648B3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D7420F9-BEEB-4DD2-95B4-40E982648B3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D7420F9-BEEB-4DD2-95B4-40E982648B3D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{92CCBC38-28B5-4D9A-AE85-266A23BDE6F6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{92CCBC38-28B5-4D9A-AE85-266A23BDE6F6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{92CCBC38-28B5-4D9A-AE85-266A23BDE6F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{92CCBC38-28B5-4D9A-AE85-266A23BDE6F6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

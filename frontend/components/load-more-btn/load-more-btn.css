@@ -1,0 +1,28 @@
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    padding: 40px 0;
+}
+
+.load-more-btn {
+    background-color: var(--color-dark-green, #5E7222);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 40px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    box-shadow: 0 4px 12px rgba(94, 114, 34, 0.2);
+    font-family: inherit;
+}
+
+.load-more-btn:hover {
+    background-color: #4a5a1a;
+}
+
+.load-more-btn:active {
+    transform: scale(0.98);
+}

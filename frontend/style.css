@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap');
+
+:root {
+    --font-montserrat: 'Montserrat', 'Inter', sans-serif;
+    --color-dark-green: #5E7222;
+    --border-color: #97A2B0;
+    --input-color: #97A2B0;
+}
+
+body {
+    margin: 0;
+    background-color: #F6F1ED;
+    font-family: 'Montserrat', sans-serif;
+    min-height: 100vh;
+}
+/* ВЕРХНЯЯ ПЛАШКА (Tasteory сверху) */
+.mobile-top-bar {
+    display: none; /* По умолчанию скрыта */
+}
+
+@media (min-width: 769px) {
+    body {
+        display: flex;
+    }
+    .mobile-top-bar, .mobile-bottom-nav {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        display: none !important;
+    }
+
+    body {
+        display: block;
+        padding-top: 30px;
+        padding-bottom: 80px;
+    }
+
+    .mobile-top-bar {
+        display: flex;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 30px;
+        background: #ffffff;
+        z-index: 1001;
+        text-align: center;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 5px rgba(0, 0, 0, 0.21);
+    }
+
+    .mobile-top-bar .logo {
+        font-family: 'Titan One', cursive;
+        font-size: 18px;
+        font-weight: 250;
+        color: var(--orange);
+        margin: 0;
+        letter-spacing: 0.5px;
+    }
+
+    .content-area {
+        padding: 15px 10px !important;
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+
+.content-area {
+    position: relative;
+    box-sizing: border-box;
+    flex: 1;
+    padding: 20px 20px 20px 30px;
+    min-width: 0;
+    min-height: 100vh;
+}
+
+/* --- ОБЩИЕ ПЕРЕМЕННЫЕ --- */
+:root {
+    --orange: #f28c50;
+    --dark-blue: #0a2533;
+    --gray: #97A2B0;
+    --bg-color: #F6F1ED;
+}
